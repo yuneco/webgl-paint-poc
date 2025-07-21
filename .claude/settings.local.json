@@ -8,7 +8,12 @@
       "Bash(npx tsc:*)",
       "Bash(git add:*)",
       "Bash(sed:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(node:*)",
+      "Bash(pnmp test:*)",
+      "Bash(git commit:*)",
+      "Bash(npm test:*)",
+      "mcp__playwright__browser_navigate"
     ],
     "deny": []
   }

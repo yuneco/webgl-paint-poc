@@ -114,20 +114,20 @@
       <h1>WebGL Symmetry Paint PoC</h1>
       
       <div class="status">
-        <h3>✅ Step 3.3 Implementation Complete</h3>
-        <p><strong>Basic Drawing Function Implementation</strong> - All tests passing (99/99)</p>
+        <h3>✅ Step 4.2 Implementation Complete</h3>
+        <p><strong>8-Axis Radial Symmetry Drawing Integration</strong> - All tests passing (159/159)</p>
       </div>
       
       <div class="info">
-        <h3>Step 3.3: Basic Drawing Function</h3>
-        <p>The basic WebGL drawing functionality has been implemented and integrated:</p>
+        <h3>Step 4.2: 8-Axis Radial Symmetry Integration</h3>
+        <p>The symmetric drawing functionality has been implemented and integrated:</p>
         <ul>
-          <li><strong>✅ renderStrokes function</strong> - Draws fixed stroke data with WebGL</li>
-          <li><strong>✅ Shader and buffer integration</strong> - Complete WebGL rendering pipeline</li>
-          <li><strong>✅ Canvas setup</strong> - 1024x1024 white background with proper WebGL state</li>
-          <li><strong>✅ Drawing tests</strong> - 25 renderer tests covering all functionality</li>
-          <li><strong>✅ Consistent rendering</strong> - Same input produces consistent drawing results</li>
-          <li><strong>✅ Single color drawing</strong> - Basic black stroke rendering working</li>
+          <li><strong>✅ Mathematical Foundation</strong> - Complete 8-axis radial symmetry transforms</li>
+          <li><strong>✅ Symmetry Renderer</strong> - Generate 8 symmetric strokes from single input</li>
+          <li><strong>✅ WebGL Integration</strong> - Seamless integration with existing drawing engine</li>
+          <li><strong>✅ Configuration System</strong> - Toggle symmetry on/off with SymmetryConfig</li>
+          <li><strong>✅ Visual Testing</strong> - 34 comprehensive tests for symmetry functions</li>
+          <li><strong>✅ Mathematical Accuracy</strong> - Distance preservation and geometric correctness</li>
         </ul>
       </div>
 
@@ -143,26 +143,36 @@
           <button id="render-points" class="demo-button">Render as Points</button>
           <button id="clear-canvas" class="demo-button">Clear Canvas</button>
         </div>
-      </div>
-      
-      <div class="demo-section">
-        <h3>Individual Stroke Testing</h3>
-        <p>Click on a stroke type to render it individually:</p>
-        <div id="stroke-list" style="display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0;">
-          <!-- Will be populated by JavaScript -->
-        </div>
-        <div style="text-align: center; margin: 10px 0;">
-          <button id="render-selected" class="demo-button">Render Selected Stroke</button>
-        </div>
-      </div>
-      
-      <div class="demo-section">
-        <h3>Color Testing</h3>
-        <div style="text-align: center;">
-          <button id="color-black" class="demo-button">Black</button>
-          <button id="color-red" class="demo-button">Red</button>
-          <button id="color-green" class="demo-button">Green</button>
-          <button id="color-blue" class="demo-button">Blue</button>
+        
+        <div style="text-align: center; margin: 20px 0; border-top: 2px solid #007bff; padding-top: 15px;">
+          <h3>統合描画テスト</h3>
+          
+          <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: center; margin: 15px 0;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label style="font-weight: bold;">対称モード:</label>
+              <input type="checkbox" id="symmetry-enabled" checked>
+              <span>8軸対称ON/OFF</span>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label style="font-weight: bold;">色設定:</label>
+              <select id="color-select" style="padding: 5px; border-radius: 3px; border: 1px solid #ddd;">
+                <option value="black">黒</option>
+                <option value="red">赤</option>
+                <option value="blue">青</option>
+                <option value="green">緑</option>
+                <option value="orange">オレンジ</option>
+                <option value="purple">紫</option>
+              </select>
+            </div>
+          </div>
+          
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 15px 0;">
+            <button id="draw-line" class="demo-button">直線</button>
+            <button id="draw-curve" class="demo-button">曲線</button>
+            <button id="draw-arc" class="demo-button">円弧</button>
+            <button id="draw-multi" class="demo-button">複数ストローク</button>
+          </div>
         </div>
       </div>
       
@@ -172,26 +182,26 @@
       </div>
 
       <div class="info">
-        <h3>What to Test:</h3>
+        <h3>テスト方法:</h3>
         <ul>
-          <li><strong>Lines as lines</strong> - Horizontal, vertical, and diagonal lines should appear straight</li>
-          <li><strong>Arcs as arcs</strong> - Curved strokes should appear as smooth curves</li>
-          <li><strong>Color changes</strong> - Black, red, green, blue colors should work</li>
-          <li><strong>Individual strokes</strong> - Click stroke types to render them separately</li>
-          <li><strong>Point rendering</strong> - "Render as Points" should show individual vertex points</li>
-          <li><strong>Clear canvas</strong> - Canvas should clear to white background</li>
+          <li><strong>色選択</strong> - selectで色を選択</li>
+          <li><strong>対称モード</strong> - チェックボックスで8軸対称のON/OFF</li>
+          <li><strong>ストローク描画</strong> - ボタンクリックで設定に従って描画</li>
+          <li><strong>8軸対称</strong> - 対称モードONで美しい万華鏡パターンを確認</li>
+          <li><strong>数学的正確性</strong> - 中心(512,512)から等距離、45度間隔</li>
         </ul>
       </div>
 
       <div class="info">
         <h3>Implementation Details:</h3>
         <ul>
-          <li><strong>Renderer System</strong> - Complete WebGL renderer with initialization, cleanup</li>
-          <li><strong>Drawing Functions</strong> - renderStroke, renderStrokes, renderStrokesAsPoints, renderTestPattern</li>
-          <li><strong>WebGL Integration</strong> - Shaders + Buffers working together seamlessly</li>
-          <li><strong>Test Coverage</strong> - 25 renderer tests + existing 74 tests = 99 total tests passing</li>
-          <li><strong>Error Handling</strong> - Proper error handling for all edge cases</li>
-          <li><strong>Memory Management</strong> - Buffer cleanup and resource management</li>
+          <li><strong>Mathematical Foundation</strong> - 8-axis radial symmetry using reflection matrices</li>
+          <li><strong>Transformation Functions</strong> - Point and stroke transformations with center preservation</li>
+          <li><strong>Symmetry Renderer</strong> - renderStrokeWithSymmetry, generateSymmetricStrokes</li>
+          <li><strong>WebGL Integration</strong> - Seamless integration with existing drawing pipeline</li>
+          <li><strong>Test Coverage</strong> - 34 symmetry tests + 125 existing tests = 159 total tests passing</li>
+          <li><strong>Visual Verification</strong> - Interactive buttons to test all symmetry patterns</li>
+          <li><strong>Mathematical Accuracy</strong> - Distance preservation, angle correctness, consistency tests</li>
         </ul>
       </div>
 
@@ -206,24 +216,88 @@
                 clearCanvas, setDrawingColor, renderStroke, cleanupRenderer } from './src/webgl/renderer.js';
         import { allTestStrokes, horizontalLineStroke, verticalLineStroke, diagonalLineStroke,
                 arcStroke, complexCurveStroke, spiralStroke, zigzagStroke } from './src/data/testStrokes.js';
+        // Import symmetry renderer
+        import { renderStrokeWithSymmetry, renderStrokesWithSymmetry } from './src/symmetry/symmetryRenderer.js';
 
         let renderer;
-        let selectedStroke = null;
-        
-        const strokeMap = {
-            'Horizontal Line': horizontalLineStroke,
-            'Vertical Line': verticalLineStroke,
-            'Diagonal Line': diagonalLineStroke,
-            'Arc': arcStroke,
-            'Complex Curve': complexCurveStroke,
-            'Spiral': spiralStroke,
-            'Zigzag': zigzagStroke
-        };
 
         function updateStatus(message, type = 'info') {
             const statusEl = document.getElementById('status');
             const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
             statusEl.innerHTML = `<h3>Status</h3><p style="color: ${type === 'error' ? '#721c24' : type === 'success' ? '#155724' : '#004085'};">${message}</p>`;
+        }
+
+        // 色設定を適用
+        function applyColorSetting() {
+            const colorSelect = document.getElementById('color-select');
+            const colorName = colorSelect.value;
+            
+            const colors = {
+                black: [0, 0, 0, 1],
+                red: [1, 0, 0, 1],
+                blue: [0, 0, 1, 1],
+                green: [0, 1, 0, 1],
+                orange: [1, 0.5, 0, 1],
+                purple: [0.8, 0, 0.8, 1]
+            };
+            
+            if (colors[colorName]) {
+                setDrawingColor(renderer, colors[colorName][0], colors[colorName][1], colors[colorName][2], colors[colorName][3]);
+            }
+        }
+
+        // ストローク描画の統合関数
+        function drawStroke(strokeType) {
+            if (!renderer) {
+                updateStatus('エラー: レンダラーが初期化されていません', 'error');
+                return;
+            }
+
+            // 色設定を適用
+            applyColorSetting();
+            
+            // 対称モード設定を取得
+            const symmetryEnabled = document.getElementById('symmetry-enabled').checked;
+            const symmetryConfig = {
+                enabled: symmetryEnabled,
+                axisCount: 8,
+                centerPoint: { x: 512, y: 512 }
+            };
+
+            let strokes = [];
+            
+            // ストロークタイプに応じてデータを生成
+            switch (strokeType) {
+                case 'line':
+                    strokes = [horizontalLineStroke];
+                    break;
+                    
+                case 'curve':
+                    strokes = [complexCurveStroke];
+                    break;
+                    
+                case 'arc':
+                    strokes = [arcStroke];
+                    break;
+                    
+                case 'multi':
+                    strokes = [horizontalLineStroke, diagonalLineStroke];
+                    break;
+            }
+
+            try {
+                clearCanvas(renderer);
+                if (symmetryEnabled) {
+                    renderStrokesWithSymmetry(renderer, strokes, symmetryConfig);
+                    updateStatus(`✓ ${strokeType}描画完了（8軸対称モード）- ${strokes.length}個のストロークから${strokes.length * 8}個の対称ストロークを生成`, 'success');
+                } else {
+                    renderStrokes(renderer, strokes);
+                    updateStatus(`✓ ${strokeType}描画完了（通常モード）- ${strokes.length}個のストロークを描画`, 'success');
+                }
+            } catch (error) {
+                console.error('描画エラー:', error);
+                updateStatus('エラー: 描画に失敗しました - ' + error.message, 'error');
+            }
         }
 
         function initializeDemo() {
@@ -235,32 +309,10 @@
                 
                 updateStatus('WebGL renderer initialized successfully. Canvas is ready for drawing.', 'success');
                 
-                // Set up stroke list
-                const strokeList = document.getElementById('stroke-list');
-                Object.keys(strokeMap).forEach(strokeName => {
-                    const item = document.createElement('div');
-                    item.className = 'stroke-item';
-                    item.textContent = strokeName;
-                    item.addEventListener('click', () => selectStroke(strokeName, item));
-                    strokeList.appendChild(item);
-                });
-                
             } catch (error) {
                 updateStatus(`Failed to initialize WebGL renderer: ${error.message}`, 'error');
                 console.error('Initialization error:', error);
             }
-        }
-
-        function selectStroke(strokeName, element) {
-            // Clear previous selection
-            document.querySelectorAll('.stroke-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            
-            // Select new stroke
-            element.classList.add('selected');
-            selectedStroke = strokeMap[strokeName];
-            updateStatus(`Selected: ${strokeName}`, 'info');
         }
 
         // Button event handlers
@@ -303,40 +355,11 @@
             }
         });
 
-        document.getElementById('render-selected').addEventListener('click', () => {
-            if (!selectedStroke) {
-                updateStatus('Please select a stroke type first', 'error');
-                return;
-            }
-            try {
-                clearCanvas(renderer);
-                renderStroke(renderer, selectedStroke);
-                updateStatus(`Rendered selected stroke (${selectedStroke.points.length} points)`, 'success');
-            } catch (error) {
-                updateStatus(`Error rendering selected stroke: ${error.message}`, 'error');
-            }
-        });
-
-        // Color buttons
-        document.getElementById('color-black').addEventListener('click', () => {
-            setDrawingColor(renderer, 0.0, 0.0, 0.0, 1.0);
-            updateStatus('Drawing color set to black');
-        });
-
-        document.getElementById('color-red').addEventListener('click', () => {
-            setDrawingColor(renderer, 1.0, 0.0, 0.0, 1.0);
-            updateStatus('Drawing color set to red');
-        });
-
-        document.getElementById('color-green').addEventListener('click', () => {
-            setDrawingColor(renderer, 0.0, 1.0, 0.0, 1.0);
-            updateStatus('Drawing color set to green');
-        });
-
-        document.getElementById('color-blue').addEventListener('click', () => {
-            setDrawingColor(renderer, 0.0, 0.0, 1.0, 1.0);
-            updateStatus('Drawing color set to blue');
-        });
+        // 統合描画ボタン
+        document.getElementById('draw-line').addEventListener('click', () => drawStroke('line'));
+        document.getElementById('draw-curve').addEventListener('click', () => drawStroke('curve'));
+        document.getElementById('draw-arc').addEventListener('click', () => drawStroke('arc'));
+        document.getElementById('draw-multi').addEventListener('click', () => drawStroke('multi'));
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', initializeDemo);
