@@ -84,7 +84,6 @@ describe('Test Stroke Data', () => {
       
       // Arc should start and end at specific positions
       const firstPoint = arcStroke.points[0];
-      const lastPoint = arcStroke.points[arcStroke.points.length - 1];
       
       // First point should be at (612, 512) - center + radius
       expect(Math.abs(firstPoint.x - 612)).toBeLessThan(1);
