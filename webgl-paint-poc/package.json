@@ -1,0 +1,20 @@
+{
+  "name": "webgl-paint-poc",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@vitest/browser": "^3.2.4",
+    "jsdom": "^26.1.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4",
+    "vitest": "^3.2.4",
+    "webdriverio": "^9.18.1"
+  }
+}

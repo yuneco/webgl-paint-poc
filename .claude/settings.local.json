@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm add:*)",
+      "Bash(pnpm test:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}

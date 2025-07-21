@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebGL Symmetry Paint PoC</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+      #app {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+      #paint-canvas {
+        border: 2px solid #333;
+        background-color: white;
+        cursor: crosshair;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>WebGL Symmetry Paint PoC</h1>
+      <canvas 
+        id="paint-canvas" 
+        width="1024" 
+        height="1024">
+        Your browser does not support WebGL
+      </canvas>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
