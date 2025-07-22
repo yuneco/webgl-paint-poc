@@ -28,19 +28,22 @@
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Input Layer   │───▶│   App State      │───▶│  Render Layer   │
 │                 │    │                  │    │                 │
-│ • Mouse/Touch   │    │ • Drawing State  │    │ • WebGL Context │
+│ • Raw Events    │    │ • Drawing State  │    │ • WebGL Context │
 │ • Pressure      │    │ • Symmetry Config│    │ • Render Funcs  │
-│ • Event Stream  │    │ • Zoom/View      │    │ • Buffer Mgmt   │
+│ • Device Coords │    │ • Performance    │    │ • Buffer Mgmt   │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌──────────────────┐
-                       │   UI Controls    │
-                       │                  │
-                       │ • Zoom Slider    │
-                       │ • Performance    │
-                       │ • Debug Info     │
-                       └──────────────────┘
+         │                       │                       ▲
+         │                       │                       │
+         ▼                       ▼                       │
+┌─────────────────┐    ┌──────────────────┐             │
+│ Coordinate      │    │   UI Controls    │             │
+│ Transform Layer │    │                  │             │
+│                 │    │ • Zoom Slider    │             │
+│ • View Matrix   │    │ • Performance    │             │
+│ • Input→Canvas  │    │ • Debug Info     │             │
+│ • Canvas→WebGL  │    └──────────────────┘             │
+│ • Zoom/Pan/Rot  │                                     │
+└─────────────────┘─────────────────────────────────────┘
 ```
 
 ### WebGL 描画パイプライン
@@ -74,6 +77,7 @@ interface DrawingState {
 interface ViewState {
   zoomLevel: number;
   panOffset: { x: number; y: number };
+  rotation: number; // 回転角度（ラジアン）
   canvasSize: { width: number; height: number };
   tilingEnabled: boolean;
 }
@@ -85,6 +89,48 @@ interface SymmetryConfig {
 }
 ```
 
+### 座標変換レイヤー（独立管理）
+
+```typescript
+// 座標系の状態を管理する独立したレイヤー
+interface CoordinateTransform {
+  // ビュー変換行列（ズーム、パン、回転の合成）
+  viewMatrix: Matrix3x3;
+  // 逆変換行列（入力座標→Canvas座標用）
+  inverseViewMatrix: Matrix3x3;
+  // Canvas→WebGL正規化座標変換
+  canvasToWebGL: Matrix3x3;
+  // WebGL→Canvas座標変換
+  webGLToCanvas: Matrix3x3;
+}
+
+// 座標変換の純粋関数群
+function createCoordinateTransform(viewState: ViewState): CoordinateTransform {
+  // ViewStateから変換行列を生成
+}
+
+function transformDeviceToCanvas(
+  devicePoint: DevicePoint,
+  transform: CoordinateTransform
+): CanvasPoint {
+  // デバイス座標→Canvas座標（入力処理用）
+}
+
+function transformCanvasToWebGL(
+  canvasPoint: CanvasPoint,
+  transform: CoordinateTransform
+): WebGLPoint {
+  // Canvas座標→WebGL正規化座標（描画用）
+}
+
+function transformCanvasToDevice(
+  canvasPoint: CanvasPoint,
+  transform: CoordinateTransform
+): DevicePoint {
+  // Canvas座標→デバイス座標（UI表示用）
+}
+```
+
 ### 純粋関数群（ステートレス）
 
 #### 1. 対称変換関数
@@ -92,10 +138,10 @@ interface SymmetryConfig {
 ```typescript
 // 純粋関数：入力に対して決定的な出力
 function transformPointSymmetrically(
-  point: StrokePoint,
+  point: CanvasPoint, // Canvas座標系で統一
   config: SymmetryConfig
-): StrokePoint[] {
-  // 対称変換ロジック
+): CanvasPoint[] {
+  // 対称変換ロジック（Canvas座標系内で完結）
 }
 
 function calculateSymmetryAxes(config: SymmetryConfig): number[] {
@@ -106,12 +152,15 @@ function calculateSymmetryAxes(config: SymmetryConfig): number[] {
 #### 2. 入力処理関数
 
 ```typescript
-function normalizePointerEvent(event: PointerEvent): StrokePoint {
-  // イベントを正規化されたStrokePointに変換
+function normalizePointerEvent(
+  event: PointerEvent,
+  transform: CoordinateTransform
+): CanvasPoint {
+  // デバイス座標→Canvas座標への変換を含む正規化
 }
 
-function applySmoothingToStroke(points: StrokePoint[]): StrokePoint[] {
-  // Catmull-Rom splineスムージング
+function applySmoothingToStroke(points: CanvasPoint[]): CanvasPoint[] {
+  // Catmull-Rom splineスムージング（Canvas座標系で処理）
 }
 ```
 
@@ -423,3 +472,81 @@ interface VertexData {
 - **テスト環境**: 開発者手元環境のみ（実機テスト環境は最小限）
 - **視覚テスト**: 手動確認のみ（自動化は実装しない）
 - **ライブラリ**: RxJS 不使用、Vanilla JS イベント処理で実装
+
+### 座標系統合の実装例
+
+```typescript
+// 座標系の統一的な管理
+interface CoordinateSystem {
+  // デバイス座標 (px) → Canvas座標 (0-1024)
+  deviceToCanvas(deviceX: number, deviceY: number): CanvasPoint;
+  // Canvas座標 (0-1024) → WebGL正規化座標 (-1 to 1)
+  canvasToWebGL(canvasX: number, canvasY: number): WebGLPoint;
+  // 逆変換: WebGL → Canvas
+  webGLToCanvas(webglX: number, webglY: number): CanvasPoint;
+  // 逆変換: Canvas → デバイス
+  canvasToDevice(canvasX: number, canvasY: number): DevicePoint;
+}
+
+// 使用例: 入力処理での座標変換
+function handlePointerEvent(
+  event: PointerEvent,
+  coordinateSystem: CoordinateSystem
+): CanvasPoint {
+  // デバイス座標を直接Canvas座標に変換
+  return coordinateSystem.deviceToCanvas(event.clientX, event.clientY);
+}
+
+// 使用例: 描画処理での座標変換
+function renderStrokePoints(
+  canvasPoints: CanvasPoint[],
+  coordinateSystem: CoordinateSystem
+): void {
+  // Canvas座標をWebGL座標に変換して描画
+  const webglPoints = canvasPoints.map((point) =>
+    coordinateSystem.canvasToWebGL(point.x, point.y)
+  );
+  // WebGL描画処理...
+}
+
+// 座標変換行列の管理
+class CoordinateTransformManager {
+  private viewMatrix: Matrix3x3;
+  private inverseViewMatrix: Matrix3x3;
+
+  constructor(viewState: ViewState) {
+    this.updateTransforms(viewState);
+  }
+
+  updateTransforms(viewState: ViewState): void {
+    // ズーム・パン・回転を合成した変換行列を計算
+    this.viewMatrix = this.calculateViewMatrix(viewState);
+    this.inverseViewMatrix = this.viewMatrix.inverse();
+  }
+
+  private calculateViewMatrix(viewState: ViewState): Matrix3x3 {
+    // 1. 平行移動行列 (パン)
+    const translation = Matrix3x3.translation(
+      viewState.panOffset.x,
+      viewState.panOffset.y
+    );
+
+    // 2. スケール行列 (ズーム)
+    const scale = Matrix3x3.scale(viewState.zoomLevel, viewState.zoomLevel);
+
+    // 3. 回転行列 (将来の拡張用)
+    const rotation = Matrix3x3.rotation(viewState.rotation || 0);
+
+    // 合成: Scale * Rotation * Translation
+    return scale.multiply(rotation).multiply(translation);
+  }
+}
+```
+
+### 座標系設計の利点
+
+1. **責任の分離**: 座標変換ロジックが独立し、入力・描画レイヤーから分離
+2. **拡張性**: 回転機能追加時も座標変換レイヤーのみ変更
+3. **テスタビリティ**: 座標変換の単体テストが容易
+4. **一貫性**: 全てのレイヤーが同じ座標変換を参照
+5. **デバッグ性**: 座標変換の問題を特定しやすい
