@@ -80,14 +80,18 @@ export function generateSymmetricStrokes(
     };
   }
 
+  const pointCount = originalStroke.points.length;
   const symmetricStrokes: StrokeData[] = [];
   
   // 各対称軸についてストローク全体を変換
   for (let axisIndex = 0; axisIndex < config.axisCount; axisIndex++) {
+    // Pre-allocate array for better performance
+    const transformedPoints: StrokePoint[] = new Array(pointCount);
+    
     // Transform each point in the stroke
-    const transformedPoints: StrokePoint[] = originalStroke.points.map(point => 
-      Transform.transformStrokePointByAxis(point, axisIndex)
-    );
+    for (let i = 0; i < pointCount; i++) {
+      transformedPoints[i] = Transform.transformStrokePointByAxis(originalStroke.points[i], axisIndex);
+    }
 
     // Create new stroke data with transformed points
     const symmetricStroke: StrokeData = {
@@ -125,11 +129,18 @@ export function generateAllSymmetricStrokes(
     return originalStrokes;
   }
 
-  const allStrokes: StrokeData[] = [];
+  // Pre-allocate array for better performance
+  const totalSymmetricStrokes = originalStrokes.length * config.axisCount;
+  const allStrokes: StrokeData[] = new Array(totalSymmetricStrokes);
+  let strokeIndex = 0;
   
   for (const originalStroke of originalStrokes) {
     const result = generateSymmetricStrokes(originalStroke, config);
-    allStrokes.push(...result.symmetricStrokes);
+    
+    // Use direct indexing instead of spread operator for better performance
+    for (let i = 0; i < result.symmetricStrokes.length; i++) {
+      allStrokes[strokeIndex++] = result.symmetricStrokes[i];
+    }
   }
   
   return allStrokes;
@@ -167,6 +178,34 @@ export function renderStrokesWithSymmetry(
 
   const symmetricStrokes = generateAllSymmetricStrokes(strokes, config);
   renderStrokes(renderer, symmetricStrokes);
+}
+
+/**
+ * 高性能リアルタイム対称描画関数
+ * 大量の点データに対して最適化された処理を行う
+ */
+export function renderStrokesWithSymmetryOptimized(
+  renderer: WebGLRenderer, 
+  strokes: StrokeData[], 
+  config: SymmetryConfig = DEFAULT_SYMMETRY_CONFIG
+): void {
+  if (!config.enabled) {
+    renderStrokes(renderer, strokes);
+    return;
+  }
+
+  // バッチ処理のためのパフォーマンス最適化
+  const batchSize = 100; // 一度に処理するストローク数
+  const totalBatches = Math.ceil(strokes.length / batchSize);
+  
+  for (let batch = 0; batch < totalBatches; batch++) {
+    const startIdx = batch * batchSize;
+    const endIdx = Math.min(startIdx + batchSize, strokes.length);
+    const batchStrokes = strokes.slice(startIdx, endIdx);
+    
+    const symmetricStrokes = generateAllSymmetricStrokes(batchStrokes, config);
+    renderStrokes(renderer, symmetricStrokes);
+  }
 }
 
 /**

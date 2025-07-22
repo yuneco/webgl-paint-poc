@@ -10,9 +10,10 @@ export interface StrokePoint {
 export interface StrokeData {
   id: string;
   points: StrokePoint[];
-  symmetryMode: SymmetryMode;
+  symmetryMode?: SymmetryMode;
   timestamp: number;
-  completed: boolean;
+  completed?: boolean;
+  metadata?: Record<string, unknown>;
 }
 
 export const SymmetryMode = {

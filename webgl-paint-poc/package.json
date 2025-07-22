@@ -16,5 +16,8 @@
     "vite": "^7.0.4",
     "vitest": "^3.2.4",
     "webdriverio": "^9.18.1"
+  },
+  "dependencies": {
+    "zustand": "^5.0.6"
   }
 }
