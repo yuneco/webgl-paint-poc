@@ -388,7 +388,9 @@ export class InputEventHandler {
     }
     
     // 筆圧値は通常0.0-1.0の範囲だが、デバイスによって異なる場合がある
-    return Math.max(0.0, Math.min(1.0, pressure));
+    // 筆圧非対応デバイスで0.0が来ても最小値0.3を保証
+    const normalizedPressure = Math.max(0.0, Math.min(1.0, pressure));
+    return normalizedPressure === 0.0 ? 0.5 : normalizedPressure;
   }
 
   /**

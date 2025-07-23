@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Temporary files and screenshots
+tmp/
+*.tmp
+screenshots/
+playwright-report/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

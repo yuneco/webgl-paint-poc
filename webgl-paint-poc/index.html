@@ -114,8 +114,8 @@
       <h1>WebGL Symmetry Paint PoC</h1>
       
       <div class="status">
-        <h3>✅ Step 4.2 Implementation Complete</h3>
-        <p><strong>8-Axis Radial Symmetry Drawing Integration</strong> - All tests passing (159/159)</p>
+        <h3>✅ Task 6.3 Implementation Complete</h3>
+        <p><strong>Real-time Input Processing & Drawing Integration</strong> - All tests passing (285/285)</p>
       </div>
       
       <div class="info">
@@ -132,7 +132,36 @@
       </div>
 
       <div class="demo-section">
-        <h2>Drawing Canvas (1024x1024)</h2>
+        <h2>Interactive Paint Canvas (1024x1024)</h2>
+        <div style="text-align: center; margin: 20px 0;">
+          <canvas id="paint-canvas" width="1024" height="1024" style="max-width: 100%; height: auto; border: 2px solid #ddd; border-radius: 4px; background: white; cursor: crosshair;"></canvas>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0; background: #e8f4fd; padding: 15px; border-radius: 8px;">
+          <h3 style="margin-top: 0; color: #0066cc;">🎨 リアルタイム描画モード - Task 6.3 完了</h3>
+          <p style="margin: 10px 0; font-weight: bold; color: #333;">マウス・タッチ・ペンで直接描画できます！</p>
+          
+          <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: center; margin: 15px 0;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label style="font-weight: bold;">対称描画:</label>
+              <input type="checkbox" id="live-symmetry-enabled" checked>
+              <span>8軸対称 ON/OFF</span>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label style="font-weight: bold;">デバッグ表示:</label>
+              <input type="checkbox" id="debug-enabled" checked>
+              <span>統計情報表示</span>
+            </div>
+          </div>
+          
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 15px 0;">
+            <button id="clear-live-canvas" class="demo-button">キャンバスをクリア</button>
+            <button id="toggle-symmetry" class="demo-button">対称モード切替</button>
+          </div>
+        </div>
+        
+        <h2>Static Test Canvas (1024x1024)</h2>
         <div style="text-align: center; margin: 20px 0;">
           <canvas id="test-canvas" width="1024" height="1024" style="max-width: 100%; height: auto; border: 2px solid #ddd; border-radius: 4px; background: white;"></canvas>
         </div>
@@ -218,8 +247,11 @@
                 arcStroke, complexCurveStroke, spiralStroke, zigzagStroke } from './src/data/testStrokes.js';
         // Import symmetry renderer
         import { renderStrokeWithSymmetry, renderStrokesWithSymmetry } from './src/symmetry/symmetryRenderer.js';
+        // Import Paint App
+        import { PaintApp } from './src/app/PaintApp.js';
 
         let renderer;
+        let paintApp;
 
         function updateStatus(message, type = 'info') {
             const statusEl = document.getElementById('status');
@@ -302,15 +334,21 @@
 
         function initializeDemo() {
             try {
+                // Initialize static test canvas
                 renderer = initializeRenderer('test-canvas');
-                
-                // Set default drawing color to black
                 setDrawingColor(renderer, 0.0, 0.0, 0.0, 1.0);
                 
-                updateStatus('WebGL renderer initialized successfully. Canvas is ready for drawing.', 'success');
+                // Initialize interactive paint app
+                paintApp = new PaintApp({
+                    canvasId: 'paint-canvas',
+                    displaySize: { width: 500, height: 500 },
+                    enableDebug: true
+                });
+                
+                updateStatus('WebGL renderer and Paint App initialized successfully. Both canvases ready!', 'success');
                 
             } catch (error) {
-                updateStatus(`Failed to initialize WebGL renderer: ${error.message}`, 'error');
+                updateStatus(`Failed to initialize: ${error.message}`, 'error');
                 console.error('Initialization error:', error);
             }
         }
@@ -361,6 +399,30 @@
         document.getElementById('draw-arc').addEventListener('click', () => drawStroke('arc'));
         document.getElementById('draw-multi').addEventListener('click', () => drawStroke('multi'));
 
+        // Live canvas controls
+        document.getElementById('clear-live-canvas').addEventListener('click', () => {
+            if (paintApp) {
+                paintApp.clearCanvas();
+                updateStatus('Live canvas cleared', 'success');
+            }
+        });
+
+        document.getElementById('toggle-symmetry').addEventListener('click', () => {
+            if (paintApp) {
+                const currentState = document.getElementById('live-symmetry-enabled').checked;
+                const newState = !currentState;
+                document.getElementById('live-symmetry-enabled').checked = newState;
+                paintApp.updateSymmetry(newState, 8);
+                updateStatus(`Symmetry mode ${newState ? 'enabled' : 'disabled'}`, 'success');
+            }
+        });
+
+        document.getElementById('live-symmetry-enabled').addEventListener('change', (e) => {
+            if (paintApp) {
+                paintApp.updateSymmetry(e.target.checked, 8);
+            }
+        });
+
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', initializeDemo);
 
@@ -368,6 +430,9 @@
         window.addEventListener('beforeunload', () => {
             if (renderer) {
                 cleanupRenderer(renderer);
+            }
+            if (paintApp) {
+                paintApp.destroy();
             }
         });
     </script>

@@ -45,6 +45,62 @@ export const DEFAULT_SYMMETRY_CONFIG: SymmetryConfig = {
 };
 
 /**
+ * 対称描画レンダラークラス
+ */
+export class SymmetryRenderer {
+  private config: SymmetryConfig;
+
+  constructor(config: SymmetryConfig = DEFAULT_SYMMETRY_CONFIG) {
+    this.config = config;
+  }
+
+  /**
+   * 設定を更新
+   */
+  updateConfig(config: Partial<SymmetryConfig>): void {
+    this.config = { ...this.config, ...config };
+  }
+
+  /**
+   * 現在の設定を取得
+   */
+  getConfig(): SymmetryConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * 単一ストロークから対称ストローク配列を生成
+   */
+  generateSymmetryStrokes(stroke: StrokeData, config?: SymmetryConfig): StrokeData[] {
+    const activeConfig = config || this.config;
+    
+    if (!activeConfig.enabled || activeConfig.axisCount <= 1) {
+      return [stroke];
+    }
+
+    const result = generateSymmetricStrokes(stroke, activeConfig);
+    return result.symmetricStrokes;
+  }
+
+  /**
+   * 複数ストロークから対称ストローク配列を生成
+   */
+  generateSymmetryStrokesMultiple(strokes: StrokeData[], config?: SymmetryConfig): StrokeData[] {
+    const activeConfig = config || this.config;
+    
+    if (!activeConfig.enabled || activeConfig.axisCount <= 1) {
+      return [...strokes];
+    }
+
+    const result: StrokeData[] = [];
+    for (const stroke of strokes) {
+      result.push(...this.generateSymmetryStrokes(stroke, activeConfig));
+    }
+    return result;
+  }
+}
+
+/**
  * 単一ストロークポイントから対称ポイント配列を生成
  * @param point 元のストロークポイント
  * @param axisCount 対称軸数

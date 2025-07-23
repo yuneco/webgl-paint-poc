@@ -144,17 +144,16 @@ export function create8AxisSymmetryTransform(axisIndex: number): SymmetryTransfo
   
   // 変換手順:
   // 1. 中心点を原点に移動  
-  // 2. 指定角度の反射軸で反射
+  // 2. 指定角度で回転
   // 3. 中心点を元の位置に戻す
   
   const centerToOrigin = createTranslationMatrix(-SYMMETRY_CENTER.x, -SYMMETRY_CENTER.y);
-  const reflectionLineAngle = angle + Math.PI/2; // 反射軸は法線に垂直
-  const reflection = createReflectionMatrix(reflectionLineAngle);
+  const rotation = createRotationMatrix(angle);
   const originToCenter = createTranslationMatrix(SYMMETRY_CENTER.x, SYMMETRY_CENTER.y);
   
   // 行列の合成（右から左に適用される）
   let matrix = centerToOrigin;
-  matrix = multiplyMatrices(reflection, matrix);
+  matrix = multiplyMatrices(rotation, matrix);
   matrix = multiplyMatrices(originToCenter, matrix);
   
   return {
