@@ -174,6 +174,9 @@ describe('InputThrottler', () => {
     });
 
     it('should throttle events by distance', () => {
+      // Configure throttler for this test
+      throttler.updateConfig({ minDistance: 2.0 });
+      
       // 開始イベント
       const startEvent: NormalizedInputEvent = {
         position: { canvasX: 100, canvasY: 200 },
@@ -347,7 +350,7 @@ describe('InputThrottler', () => {
 
   describe('Resource Management', () => {
     it('should clean up resources on destroy', () => {
-      const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
+      vi.spyOn(window, 'clearInterval');
 
       throttler.destroy();
 

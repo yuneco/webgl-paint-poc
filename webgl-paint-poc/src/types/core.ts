@@ -1,5 +1,7 @@
 // Core data types for WebGL Symmetry Paint PoC
 
+import type { ViewTransformState } from './coordinates';
+
 export interface StrokePoint {
   x: number; // Canvas座標 (0-1024)
   y: number; // Canvas座標 (0-1024)
@@ -34,6 +36,7 @@ export interface ViewState {
   panOffset: { x: number; y: number }; // パン オフセット
   canvasSize: { width: number; height: number }; // Canvas サイズ (固定: 1024x1024)
   tilingEnabled: boolean; // タイリング表示有効/無効
+  transform: ViewTransformState; // ビュー変換状態
 }
 
 export interface DrawingState {
@@ -108,6 +111,11 @@ export const DEFAULT_VIEW_STATE: ViewState = {
   panOffset: { x: 0, y: 0 },
   canvasSize: { width: CANVAS_SIZE, height: CANVAS_SIZE },
   tilingEnabled: false,
+  transform: {
+    zoom: 1.0,
+    panOffset: { canvasX: 0, canvasY: 0 },
+    rotation: 0,
+  },
 };
 
 export const DEFAULT_DRAWING_STATE: DrawingState = {

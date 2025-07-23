@@ -22,7 +22,9 @@
       "mcp__playwright__browser_wait_for",
       "mcp__playwright__browser_drag",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "mcp__playwright__browser_resize",
+      "Bash(npm run:*)"
     ],
     "deny": []
   }

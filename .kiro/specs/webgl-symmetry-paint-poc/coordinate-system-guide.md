@@ -6,31 +6,7 @@ WebGL 対称ペイントツールでは、複数の座標系が登場し、そ�
 
 ## 座標系の登場人物
 
-### 1. デバイス座標系（Device Coordinates）
-
-**定義**: ブラウザのビューポート基準のピクセル座標
-
-- **原点**: ブラウザウィンドウの左上角
-- **単位**: ピクセル (px)
-- **範囲**: 0 ～ ウィンドウサイズ
-- **Y 軸方向**: 下向きが正
-
-**例**: マウスクリック位置 `(clientX: 150, clientY: 200)`
-
-```
-ブラウザウィンドウ
-┌─────────────────────────────┐
-│ (0,0)                       │
-│   ┌─────────────────┐       │
-│   │     Canvas      │       │
-│   │  (150,200)●     │       │
-│   │                 │       │
-│   └─────────────────┘       │
-│                             │
-└─────────────────────────────┘
-```
-
-### 2. Canvas 座標系（Canvas Coordinates）
+### 1. Canvas 座標系（Canvas Coordinates）
 
 **定義**: 描画キャンバスの論理座標系（内部的なイデアルな座標）
 
@@ -52,23 +28,7 @@ Canvas座標系 (1024x1024)
 └─────────────────────────────┘ (1024,1024)
 ```
 
-### 3. ビュー座標系（View Coordinates）
-
-**定義**: ズーム・パン・回転が適用された Canvas 座標系
-
-- **原点**: ビュー変換後の座標
-- **単位**: 変換後の論理ピクセル
-- **範囲**: ズーム・パンに依存
-- **Y 軸方向**: 下向きが正
-
-**例**: ズーム 2 倍、パン(100,50)の場合
-
-```
-元のCanvas座標 (400,300) → ビュー座標 (900,650)
-計算: (400 * 2 + 100, 300 * 2 + 50)
-```
-
-### 4. WebGL 正規化座標系（WebGL Normalized Coordinates）
+### 2. WebGL 正規化座標系（WebGL Normalized Coordinates）
 
 **定義**: WebGL の標準座標系
 
@@ -91,72 +51,31 @@ WebGL正規化座標系
 ### 入力から描画までの完全な変換チェーン
 
 ```
-1. デバイス座標 → 2. Canvas座標 → 3. 対称変換 → 4. WebGL座標 → 5. GPU描画
-   (clientX,Y)      (0-1024)        (8軸複製)     (-1～1)       (画面表示)
+1. PointerEvent → 2. Canvas座標 → 3. 対称変換 → 4. WebGL座標 → 5. GPU描画
+   (offsetX,Y)      (0-1024)        (8軸複製)     (-1～1)       (画面表示)
 ```
 
 ### 詳細な変換ステップ
 
-#### ステップ 1: デバイス座標 → Canvas 座標
+#### ステップ 1: PointerEvent → Canvas 座標
 
 **目的**: ブラウザの入力イベントを内部座標系に変換
 
 ```typescript
-function deviceToCanvas(
-  deviceX: number,
-  deviceY: number,
+function pointerToCanvas(
+  offsetX: number,
+  offsetY: number,
   canvasElement: HTMLCanvasElement
 ): CanvasPoint {
-  const rect = canvasElement.getBoundingClientRect();
-
-  // Canvas要素内の相対座標に変換
-  const relativeX = deviceX - rect.left;
-  const relativeY = deviceY - rect.top;
-
-  // Canvas論理座標(0-1024)にスケール
-  const canvasX = (relativeX / rect.width) * 1024;
-  const canvasY = (relativeY / rect.height) * 1024;
+  // Canvas要素内の相対座標を直接論理座標にスケール
+  const canvasX = (offsetX / canvasElement.offsetWidth) * 1024;
+  const canvasY = (offsetY / canvasElement.offsetHeight) * 1024;
 
   return { x: canvasX, y: canvasY };
 }
 ```
 
-#### ステップ 2: ビュー変換の適用
-
-**目的**: ズーム・パン・回転を考慮した座標変換
-
-```typescript
-function applyViewTransform(
-  canvasPoint: CanvasPoint,
-  viewState: ViewState
-): CanvasPoint {
-  // 1. 平行移動（パン）
-  let x = canvasPoint.x + viewState.panOffset.x;
-  let y = canvasPoint.y + viewState.panOffset.y;
-
-  // 2. 回転（中心点周りの回転）
-  if (viewState.rotation !== 0) {
-    const centerX = 512,
-      centerY = 512;
-    const cos = Math.cos(viewState.rotation);
-    const sin = Math.sin(viewState.rotation);
-
-    const dx = x - centerX;
-    const dy = y - centerY;
-
-    x = centerX + (dx * cos - dy * sin);
-    y = centerY + (dx * sin + dy * cos);
-  }
-
-  // 3. スケール（ズーム）
-  x = (x - 512) * viewState.zoomLevel + 512;
-  y = (y - 512) * viewState.zoomLevel + 512;
-
-  return { x, y };
-}
-```
-
-#### ステップ 3: 対称変換
+#### ステップ 2: 対称変換
 
 **目的**: 8 軸対称の複製ポイント生成
 
@@ -189,7 +108,7 @@ function generateSymmetricPoints(
 }
 ```
 
-#### ステップ 4: Canvas 座標 → WebGL 座標
+#### ステップ 3: Canvas 座標 → WebGL 座標
 
 **目的**: WebGL 描画用の正規化座標に変換
 
@@ -233,7 +152,7 @@ interface StrokeData {
 ### データフローの例
 
 ```
-ユーザーがマウスクリック (clientX: 300, clientY: 400)
+ユーザーがマウスクリック (offsetX: 150, offsetY: 200)
 ↓
 Canvas座標に変換 (x: 256, y: 341)  ← この値でStrokePointを作成・保存
 ↓
@@ -251,13 +170,12 @@ WebGLで描画
 ```typescript
 interface CoordinateTransform {
   // 入力処理用
-  deviceToCanvas(deviceX: number, deviceY: number): CanvasPoint;
+  pointerToCanvas(offsetX: number, offsetY: number): CanvasPoint;
 
   // 描画処理用
   canvasToWebGL(canvasX: number, canvasY: number): WebGLPoint;
 
   // デバッグ・UI用
-  canvasToDevice(canvasX: number, canvasY: number): DevicePoint;
   webGLToCanvas(webglX: number, webglY: number): CanvasPoint;
 }
 ```
@@ -288,9 +206,11 @@ class CoordinateTransformManager implements CoordinateTransform {
     );
   }
 
-  deviceToCanvas(deviceX: number, deviceY: number): CanvasPoint {
-    // デバイス座標→Canvas座標の変換
-    // 実装詳細...
+  pointerToCanvas(offsetX: number, offsetY: number): CanvasPoint {
+    // PointerEvent座標→Canvas座標の変換
+    const canvasX = (offsetX / this.canvasElement.offsetWidth) * 1024;
+    const canvasY = (offsetY / this.canvasElement.offsetHeight) * 1024;
+    return { x: canvasX, y: canvasY };
   }
 
   canvasToWebGL(canvasX: number, canvasY: number): WebGLPoint {
@@ -307,9 +227,8 @@ class CoordinateTransformManager implements CoordinateTransform {
 
 | 座標系          | 用途           | 管理場所       | 変換タイミング |
 | --------------- | -------------- | -------------- | -------------- |
-| デバイス座標    | 入力イベント   | 一時的         | 入力時のみ     |
+| PointerEvent    | 入力イベント   | 一時的         | 入力時のみ     |
 | **Canvas 座標** | **データ保存** | **StrokeData** | **永続的**     |
-| ビュー座標      | 表示計算       | 一時的         | 描画時のみ     |
 | WebGL 座標      | GPU 描画       | 一時的         | 描画時のみ     |
 
 ### 設計の利点

@@ -5,9 +5,8 @@
 
 import { CoordinateTransform } from './CoordinateTransform';
 import type {
-  DeviceCoordinates,
+  PointerCoordinates,
   CanvasCoordinates,
-  CanvasBounds,
   ViewTransformState,
 } from '../types/coordinates';
 
@@ -49,7 +48,6 @@ export class InputEventHandler {
 
   constructor(
     canvasElement: HTMLCanvasElement,
-    canvasBounds: CanvasBounds,
     viewTransform: ViewTransformState = {
       zoom: 1.0,
       panOffset: { canvasX: 0, canvasY: 0 },
@@ -57,7 +55,7 @@ export class InputEventHandler {
     }
   ) {
     this.canvasElement = canvasElement;
-    this.coordinateTransform = new CoordinateTransform(canvasBounds, viewTransform);
+    this.coordinateTransform = new CoordinateTransform(canvasElement, viewTransform);
     
     this.setupEventListeners();
   }
@@ -69,12 +67,6 @@ export class InputEventHandler {
     this.eventCallback = callback;
   }
 
-  /**
-   * Canvas要素の境界を更新
-   */
-  updateCanvasBounds(bounds: CanvasBounds): void {
-    this.coordinateTransform.updateCanvasBounds(bounds);
-  }
 
   /**
    * ビュー変換を更新
@@ -160,12 +152,12 @@ export class InputEventHandler {
     // ポインターをキャプチャ
     this.canvasElement.setPointerCapture(event.pointerId);
     
-    const deviceCoords: DeviceCoordinates = {
-      deviceX: event.clientX,
-      deviceY: event.clientY,
+    const pointerCoords: PointerCoordinates = {
+      offsetX: event.offsetX,
+      offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.deviceToCanvas(deviceCoords);
+    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
     
     // アクティブポインターを記録
     this.activePointers.set(event.pointerId, {
@@ -204,12 +196,12 @@ export class InputEventHandler {
     
     event.preventDefault();
     
-    const deviceCoords: DeviceCoordinates = {
-      deviceX: event.clientX,
-      deviceY: event.clientY,
+    const pointerCoords: PointerCoordinates = {
+      offsetX: event.offsetX,
+      offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.deviceToCanvas(deviceCoords);
+    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
     
     const normalizedEvent: NormalizedInputEvent = {
       position: canvasCoords,
@@ -244,12 +236,12 @@ export class InputEventHandler {
     // ポインターキャプチャを解放
     this.canvasElement.releasePointerCapture(event.pointerId);
     
-    const deviceCoords: DeviceCoordinates = {
-      deviceX: event.clientX,
-      deviceY: event.clientY,
+    const pointerCoords: PointerCoordinates = {
+      offsetX: event.offsetX,
+      offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.deviceToCanvas(deviceCoords);
+    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
     
     const normalizedEvent: NormalizedInputEvent = {
       position: canvasCoords,
@@ -293,12 +285,12 @@ export class InputEventHandler {
   private handleMouseDown(event: MouseEvent): void {
     event.preventDefault();
     
-    const deviceCoords: DeviceCoordinates = {
-      deviceX: event.clientX,
-      deviceY: event.clientY,
+    const pointerCoords: PointerCoordinates = {
+      offsetX: event.offsetX,
+      offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.deviceToCanvas(deviceCoords);
+    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
     
     const normalizedEvent: NormalizedInputEvent = {
       position: canvasCoords,
@@ -323,12 +315,12 @@ export class InputEventHandler {
     
     event.preventDefault();
     
-    const deviceCoords: DeviceCoordinates = {
-      deviceX: event.clientX,
-      deviceY: event.clientY,
+    const pointerCoords: PointerCoordinates = {
+      offsetX: event.offsetX,
+      offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.deviceToCanvas(deviceCoords);
+    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
     
     const normalizedEvent: NormalizedInputEvent = {
       position: canvasCoords,
@@ -352,12 +344,12 @@ export class InputEventHandler {
     
     event.preventDefault();
     
-    const deviceCoords: DeviceCoordinates = {
-      deviceX: event.clientX,
-      deviceY: event.clientY,
+    const pointerCoords: PointerCoordinates = {
+      offsetX: event.offsetX,
+      offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.deviceToCanvas(deviceCoords);
+    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
     
     const normalizedEvent: NormalizedInputEvent = {
       position: canvasCoords,

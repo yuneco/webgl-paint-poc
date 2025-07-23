@@ -93,6 +93,11 @@ describe('Core Types', () => {
         panOffset: { x: 10, y: 20 },
         canvasSize: { width: 1024, height: 1024 },
         tilingEnabled: true,
+        transform: {
+          zoom: 1.5,
+          panOffset: { canvasX: 10, canvasY: 20 },
+          rotation: 0,
+        },
       };
 
       expect(viewState.zoomLevel).toBe(1.5);

@@ -1,32 +1,29 @@
 /**
  * CoordinateTransformのテスト
- * 各座標系間の変換の正確性を検証
+ * PointerEvent → Canvas → WebGL座標変換の正確性を検証
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { CoordinateTransform } from './CoordinateTransform';
 import type {
-  CanvasBounds,
   ViewTransformState,
-  DeviceCoordinates,
+  PointerCoordinates,
   CanvasCoordinates,
-  WebGLCoordinates,
-  ViewCoordinates,
 } from '../types/coordinates';
 
 describe('CoordinateTransform', () => {
   let transform: CoordinateTransform;
-  let defaultCanvasBounds: CanvasBounds;
+  let mockCanvas: HTMLCanvasElement;
   let defaultViewState: ViewTransformState;
 
   beforeEach(() => {
-    // 標準的なCanvas要素の設定: 200x200ピクセル、位置(100, 150)
-    defaultCanvasBounds = {
-      left: 100,
-      top: 150,
-      width: 200,
-      height: 200,
-    };
+    // Create real canvas element: 200x200 pixel display size
+    mockCanvas = document.createElement('canvas');
+    mockCanvas.width = 1024;
+    mockCanvas.height = 1024;
+    Object.defineProperty(mockCanvas, 'offsetWidth', { value: 200, configurable: true });
+    Object.defineProperty(mockCanvas, 'offsetHeight', { value: 200, configurable: true });
+    document.body.appendChild(mockCanvas);
 
     // 初期ビュー状態: 変換なし
     defaultViewState = {
@@ -35,48 +32,54 @@ describe('CoordinateTransform', () => {
       rotation: 0,
     };
 
-    transform = new CoordinateTransform(defaultCanvasBounds, defaultViewState);
+    transform = new CoordinateTransform(mockCanvas, defaultViewState);
+  });
+  
+  afterEach(() => {
+    if (mockCanvas && document.body.contains(mockCanvas)) {
+      document.body.removeChild(mockCanvas);
+    }
   });
 
   describe('Constructor and Initialization', () => {
     it('should initialize with provided canvas bounds and view state', () => {
       const matrices = transform.getTransformMatrices();
       
-      expect(matrices.deviceToCanvas).toBeDefined();
+      expect(matrices.pointerToCanvas).toBeDefined();
       expect(matrices.canvasToWebGL).toBeDefined();
       expect(matrices.canvasToView).toBeDefined();
     });
 
     it('should use default view state when not provided', () => {
-      const transformWithDefaults = new CoordinateTransform(defaultCanvasBounds);
+      const transformWithDefaults = new CoordinateTransform(mockCanvas);
       const matrices = transformWithDefaults.getTransformMatrices();
       
       expect(matrices).toBeDefined();
     });
   });
 
-  describe('Device to Canvas Coordinate Transform', () => {
+  describe('Pointer to Canvas Coordinate Transform', () => {
     it('should transform canvas element corners correctly', () => {
-      // Canvas要素の左上角(100, 150) → Canvas座標(0, 0)
-      const topLeft = transform.deviceToCanvas({
-        deviceX: 100,
-        deviceY: 150,
+      // Canvas要素の左上角 offsetX: 0, offsetY: 0 → Canvas座標(0, 0)
+      const topLeft = transform.pointerToCanvas({
+        offsetX: 0,
+        offsetY: 0,
       });
       expect(topLeft.canvasX).toBeCloseTo(0, 4);
       expect(topLeft.canvasY).toBeCloseTo(0, 4);
 
-      // Canvas要素の右下角(300, 350) → Canvas座標(1024, 1024)
-      const bottomRight = transform.deviceToCanvas({
-        deviceX: 300,
-        deviceY: 350,
+      // Canvas要素の右下角 offsetX: 200, offsetY: 200 → Canvas座標(1024, 1024)
+      const bottomRight = transform.pointerToCanvas({
+        offsetX: 200,
+        offsetY: 200,
       });
       expect(bottomRight.canvasX).toBeCloseTo(1024, 4);
       expect(bottomRight.canvasY).toBeCloseTo(1024, 4);
 
-      // Canvas要素の中心(200, 250) → Canvas座標(512, 512)
-      const center = transform.deviceToCanvas({
-        deviceX: 200,
-        deviceY: 250,
+      // Canvas要素の中心 offsetX: 100, offsetY: 100 → Canvas座標(512, 512)
+      const center = transform.pointerToCanvas({
+        offsetX: 100,
+        offsetY: 100,
       });
       expect(center.canvasX).toBeCloseTo(512, 4);
       expect(center.canvasY).toBeCloseTo(512, 4);
@@ -84,63 +87,63 @@ describe('CoordinateTransform', () => {
 
     it('should clamp coordinates to valid Canvas range', () => {
       // Canvas要素の外側の座標
-      const outsideLeft = transform.deviceToCanvas({
-        deviceX: 50, // Canvas要素より左
-        deviceY: 200,
+      const outsideLeft = transform.pointerToCanvas({
+        offsetX: -50, // Canvas要素より左
+        offsetY: 100,
       });
       expect(outsideLeft.canvasX).toBe(0);
 
-      const outsideRight = transform.deviceToCanvas({
-        deviceX: 350, // Canvas要素より右
-        deviceY: 200,
+      const outsideRight = transform.pointerToCanvas({
+        offsetX: 250, // Canvas要素より右
+        offsetY: 100,
       });
       expect(outsideRight.canvasX).toBe(1024);
     });
 
     it('should handle non-square canvas elements correctly', () => {
       // 長方形のCanvas要素: 400x200
-      const rectBounds: CanvasBounds = {
-        left: 100,
-        top: 150,
-        width: 400,
-        height: 200,
-      };
+      const rectCanvas = document.createElement('canvas');
+      rectCanvas.width = 1024;
+      rectCanvas.height = 1024;
+      Object.defineProperty(rectCanvas, 'offsetWidth', { value: 400, configurable: true });
+      Object.defineProperty(rectCanvas, 'offsetHeight', { value: 200, configurable: true });
+      document.body.appendChild(rectCanvas);
       
-      transform.updateCanvasBounds(rectBounds);
+      const rectTransform = new CoordinateTransform(rectCanvas, defaultViewState);
       
-      // 中心点の変換
-      const center = transform.deviceToCanvas({
-        deviceX: 300, // left + width/2 = 100 + 200
-        deviceY: 250, // top + height/2 = 150 + 100
+      // 中心点の変換 (offsetX: 200, offsetY: 100)
+      const center = rectTransform.pointerToCanvas({
+        offsetX: 200, // width / 2
+        offsetY: 100, // height / 2
       });
       expect(center.canvasX).toBeCloseTo(512, 4);
       expect(center.canvasY).toBeCloseTo(512, 4);
     });
   });
 
-  describe('Canvas to Device Coordinate Transform', () => {
-    it('should be inverse of device to canvas transform', () => {
-      const originalDevice: DeviceCoordinates = {
-        deviceX: 175,
-        deviceY: 225,
+  describe('Canvas to Pointer Coordinate Transform', () => {
+    it('should be inverse of pointer to canvas transform', () => {
+      const originalPointer: PointerCoordinates = {
+        offsetX: 75,
+        offsetY: 125,
       };
 
-      // Device → Canvas → Device
-      const canvas = transform.deviceToCanvas(originalDevice);
-      const backToDevice = transform.canvasToDevice(canvas);
+      // Pointer → Canvas → Pointer
+      const canvas = transform.pointerToCanvas(originalPointer);
+      const backToPointer = transform.canvasToPointer(canvas);
 
-      expect(backToDevice.deviceX).toBeCloseTo(originalDevice.deviceX, 4);
-      expect(backToDevice.deviceY).toBeCloseTo(originalDevice.deviceY, 4);
+      expect(backToPointer.offsetX).toBeCloseTo(originalPointer.offsetX, 4);
+      expect(backToPointer.offsetY).toBeCloseTo(originalPointer.offsetY, 4);
     });
 
-    it('should transform canvas coordinates to correct device positions', () => {
-      // Canvas中心(512, 512) → デバイス座標(200, 250)
-      const deviceCenter = transform.canvasToDevice({
+    it('should transform canvas coordinates to correct pointer positions', () => {
+      // Canvas中心(512, 512) → Pointer座標(100, 100)
+      const pointerCenter = transform.canvasToPointer({
         canvasX: 512,
         canvasY: 512,
       });
-      expect(deviceCenter.deviceX).toBeCloseTo(200, 4);
-      expect(deviceCenter.deviceY).toBeCloseTo(250, 4);
+      expect(pointerCenter.offsetX).toBeCloseTo(100, 4);
+      expect(pointerCenter.offsetY).toBeCloseTo(100, 4);
     });
   });
 
@@ -233,7 +236,8 @@ describe('CoordinateTransform', () => {
       transform.updateViewTransform(zoomedViewState);
 
       // Canvas中心点(512, 512)は、ズーム後も中心にいるはず
-      const centerView = transform.canvasToView({
+      // Verify zoom transformation by checking center remains at center
+      transform.canvasToView({
         canvasX: 512,
         canvasY: 512,
       });
@@ -306,28 +310,28 @@ describe('CoordinateTransform', () => {
     });
   });
 
-  describe('Canvas Bounds Update', () => {
-    it('should update device-canvas transform when bounds change', () => {
-      const newBounds: CanvasBounds = {
-        left: 200,
-        top: 100,
-        width: 400,
-        height: 300,
-      };
+  describe('Canvas Element Size Update', () => {
+    it('should work correctly with different canvas element sizes', () => {
+      const newCanvas = document.createElement('canvas');
+      newCanvas.width = 1024;
+      newCanvas.height = 1024;
+      Object.defineProperty(newCanvas, 'offsetWidth', { value: 400, configurable: true });
+      Object.defineProperty(newCanvas, 'offsetHeight', { value: 300, configurable: true });
+      document.body.appendChild(newCanvas);
 
-      transform.updateCanvasBounds(newBounds);
+      const newTransform = new CoordinateTransform(newCanvas, defaultViewState);
 
-      // 新しい境界での変換テスト
-      const topLeft = transform.deviceToCanvas({
-        deviceX: 200, // new left
-        deviceY: 100, // new top
+      // 新しい要素サイズでの変換テスト
+      const topLeft = newTransform.pointerToCanvas({
+        offsetX: 0, // element left
+        offsetY: 0, // element top
       });
       expect(topLeft.canvasX).toBeCloseTo(0, 4);
       expect(topLeft.canvasY).toBeCloseTo(0, 4);
 
-      const bottomRight = transform.deviceToCanvas({
-        deviceX: 600, // left + width
-        deviceY: 400, // top + height
+      const bottomRight = newTransform.pointerToCanvas({
+        offsetX: 400, // element width
+        offsetY: 300, // element height
       });
       expect(bottomRight.canvasX).toBeCloseTo(1024, 4);
       expect(bottomRight.canvasY).toBeCloseTo(1024, 4);
@@ -338,7 +342,7 @@ describe('CoordinateTransform', () => {
     it('should handle matrix inversion failures gracefully', () => {
       // 通常の操作では例外は発生しないはず
       expect(() => {
-        transform.deviceToCanvas({ deviceX: 150, deviceY: 200 });
+        transform.pointerToCanvas({ offsetX: 150, offsetY: 200 });
       }).not.toThrow();
 
       expect(() => {
@@ -359,7 +363,7 @@ describe('CoordinateTransform', () => {
       const matrices2 = transform.getTransformMatrices();
 
       // クローンされた異なるインスタンスのはず
-      expect(matrices1.deviceToCanvas).not.toBe(matrices2.deviceToCanvas);
+      expect(matrices1.pointerToCanvas).not.toBe(matrices2.pointerToCanvas);
       expect(matrices1.canvasToWebGL).not.toBe(matrices2.canvasToWebGL);
       expect(matrices1.canvasToView).not.toBe(matrices2.canvasToView);
     });
@@ -369,12 +373,12 @@ describe('CoordinateTransform', () => {
       const startTime = performance.now();
       
       for (let i = 0; i < 1000; i++) {
-        const device: DeviceCoordinates = {
-          deviceX: 100 + i % 200,
-          deviceY: 150 + i % 200,
+        const pointer: PointerCoordinates = {
+          offsetX: i % 200,
+          offsetY: i % 200,
         };
         
-        const canvas = transform.deviceToCanvas(device);
+        const canvas = transform.pointerToCanvas(pointer);
         const webgl = transform.canvasToWebGL(canvas);
         transform.webGLToCanvas(webgl);
       }

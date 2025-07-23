@@ -13,7 +13,7 @@ import {
   cleanupRenderer as cleanupRendererFunc,
   type WebGLRenderer as WebGLRendererInterface 
 } from './renderer';
-import type { StrokeData } from '../types/paint';
+import type { StrokeData } from '../types/core';
 
 /**
  * WebGLレンダラークラス
@@ -101,7 +101,7 @@ export class WebGLRenderer {
     version: string;
     maxTextureSize: number;
   } {
-    const gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
+    const gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl') as WebGLRenderingContext | null;
     if (!gl) {
       throw new Error('WebGL context not available');
     }

@@ -4,6 +4,7 @@
  */
 
 import type { StrokeData } from './core';
+import type { ViewTransformState } from './coordinates';
 
 // =============================================================================
 // CORE STATE - アプリケーションの本質的な状態
@@ -48,6 +49,8 @@ export interface ViewState {
   pan: { x: number; y: number };
   /** 回転角度（ラジアン） */
   rotation: number;
+  /** ビュー変換状態 */
+  transform: ViewTransformState;
 }
 
 /**

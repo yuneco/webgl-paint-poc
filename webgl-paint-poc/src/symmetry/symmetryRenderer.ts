@@ -140,7 +140,9 @@ export function generateSymmetricStrokes(
   const symmetricStrokes: StrokeData[] = [];
   
   // 各対称軸についてストローク全体を変換
-  for (let axisIndex = 0; axisIndex < config.axisCount; axisIndex++) {
+  // 8軸対称では軸数は最大8まで
+  const actualAxisCount = Math.min(config.axisCount, 8);
+  for (let axisIndex = 0; axisIndex < actualAxisCount; axisIndex++) {
     // Pre-allocate array for better performance
     const transformedPoints: StrokePoint[] = new Array(pointCount);
     

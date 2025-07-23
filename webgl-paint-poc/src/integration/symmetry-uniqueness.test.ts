@@ -3,6 +3,7 @@
  * 8軸対称で重複が発生しないことを検証する
  */
 
+import { describe, it, expect } from 'vitest';
 import { generateSymmetricStrokes } from '../symmetry/symmetryRenderer';
 import type { StrokeData } from '../types/core';
 import type { SymmetryConfig } from '../symmetry/symmetryRenderer';
@@ -13,6 +14,7 @@ describe('Symmetry Uniqueness Integration', () => {
     points: [
       { x: 600, y: 400, pressure: 1.0, timestamp: 1000 }, // Off-center point
     ],
+    timestamp: 1000,
     metadata: { timestamp: 1000, deviceType: 'mouse', totalPoints: 1 }
   };
   
@@ -78,6 +80,7 @@ describe('Symmetry Uniqueness Integration', () => {
           { x: 650, y: 450, pressure: 0.8, timestamp: 1100 },
           { x: 700, y: 500, pressure: 0.6, timestamp: 1200 },
         ],
+        timestamp: 1000,
         metadata: { timestamp: 1000, deviceType: 'mouse', totalPoints: 3 }
       };
       
@@ -107,6 +110,7 @@ describe('Symmetry Uniqueness Integration', () => {
         points: [
           { x: 512, y: 512, pressure: 1.0, timestamp: 1000 }, // Exact center
         ],
+        timestamp: 1000,
         metadata: { timestamp: 1000, deviceType: 'mouse', totalPoints: 1 }
       };
       

@@ -28,6 +28,11 @@ const initialCoreState: CoreState = {
     zoom: 1.0,
     pan: { x: 0, y: 0 },
     rotation: 0,
+    transform: {
+      zoom: 1.0,
+      panOffset: { canvasX: 0, canvasY: 0 },
+      rotation: 0,
+    },
   },
   history: {
     strokes: [],
@@ -266,6 +271,11 @@ export const coreStore = createStore<CoreStoreState>()(
               zoom: 1.0,
               pan: { x: 0, y: 0 },
               rotation: 0,
+              transform: {
+                zoom: 1.0,
+                panOffset: { canvasX: 0, canvasY: 0 },
+                rotation: 0,
+              },
             },
           }),
           false,

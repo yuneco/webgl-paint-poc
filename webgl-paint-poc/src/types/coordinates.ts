@@ -4,16 +4,17 @@
  */
 
 /**
- * デバイス座標系（ブラウザのビューポート基準）
- * - 原点: ブラウザウィンドウの左上角
+ * PointerEvent座標系（Canvas要素内の相対座標）
+ * - 原点: Canvas要素の左上角
  * - 単位: ピクセル (px)
  * - Y軸: 下向きが正
+ * - 取得方法: event.offsetX, event.offsetY
  */
-export interface DeviceCoordinates {
-  /** デバイスX座標（ピクセル） */
-  deviceX: number;
-  /** デバイスY座標（ピクセル） */
-  deviceY: number;
+export interface PointerCoordinates {
+  /** Canvas要素内のX座標（ピクセル） */
+  offsetX: number;
+  /** Canvas要素内のY座標（ピクセル） */
+  offsetY: number;
 }
 
 /**
@@ -77,19 +78,6 @@ export interface ViewTransformState {
   rotation: number;
 }
 
-/**
- * Canvas要素の境界情報
- */
-export interface CanvasBounds {
-  /** Canvas要素の左端位置（デバイス座標） */
-  left: number;
-  /** Canvas要素の上端位置（デバイス座標） */
-  top: number;
-  /** Canvas要素の表示幅（ピクセル） */
-  width: number;
-  /** Canvas要素の表示高さ（ピクセル） */
-  height: number;
-}
 
 // 定数定義
 
@@ -112,13 +100,18 @@ export const WEBGL_ORIGIN: WebGLCoordinates = {
  * 座標系変換のエラー型
  */
 export class CoordinateTransformError extends Error {
+  public readonly sourceCoordinate?: unknown;
+  public readonly transformType?: string;
+  
   constructor(
     message: string,
-    public readonly sourceCoordinate?: unknown,
-    public readonly transformType?: string
+    sourceCoordinate?: unknown,
+    transformType?: string
   ) {
     super(message);
     this.name = 'CoordinateTransformError';
+    this.sourceCoordinate = sourceCoordinate;
+    this.transformType = transformType;
   }
 }
 
@@ -151,9 +144,9 @@ export const CoordinateValidation = {
   },
 
   /**
-   * デバイス座標が非負値かチェック
+   * PointerEvent座標が非負値かチェック
    */
-  isValidDeviceCoordinates(coords: DeviceCoordinates): boolean {
-    return coords.deviceX >= 0 && coords.deviceY >= 0;
+  isValidPointerCoordinates(coords: PointerCoordinates): boolean {
+    return coords.offsetX >= 0 && coords.offsetY >= 0;
   },
 };

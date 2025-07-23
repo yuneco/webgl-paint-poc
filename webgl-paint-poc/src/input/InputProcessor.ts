@@ -5,7 +5,7 @@
 
 import { InputEventHandler, type InputEventCallback, type NormalizedInputEvent } from './InputEventHandler';
 import { InputThrottler, type ThrottleConfig, DEFAULT_THROTTLE_CONFIG } from './InputThrottler';
-import type { CanvasBounds, ViewTransformState } from '../types/coordinates';
+import type { ViewTransformState } from '../types/coordinates';
 
 /**
  * 入力処理設定
@@ -40,7 +40,6 @@ export class InputProcessor {
 
   constructor(
     canvasElement: HTMLCanvasElement,
-    canvasBounds: CanvasBounds,
     viewTransform?: ViewTransformState,
     config: InputProcessorConfig = DEFAULT_INPUT_PROCESSOR_CONFIG
   ) {
@@ -48,7 +47,7 @@ export class InputProcessor {
     this.throttler = new InputThrottler(config.throttle);
     
     // InputEventHandlerを初期化
-    this.inputHandler = new InputEventHandler(canvasElement, canvasBounds, viewTransform);
+    this.inputHandler = new InputEventHandler(canvasElement, viewTransform);
     
     // 内部処理チェーンを設定
     this.inputHandler.setEventCallback(this.handleRawInputEvent.bind(this));
@@ -61,12 +60,6 @@ export class InputProcessor {
     this.finalCallback = callback;
   }
 
-  /**
-   * Canvas要素の境界を更新
-   */
-  updateCanvasBounds(bounds: CanvasBounds): void {
-    this.inputHandler.updateCanvasBounds(bounds);
-  }
 
   /**
    * ビュー変換を更新
@@ -219,7 +212,7 @@ export class InputProcessor {
    */
   public getDebugInfo(): {
     config: InputProcessorConfig;
-    stats: ReturnType<typeof this.getStats>;
+    stats: ReturnType<InputProcessor['getStats']>;
     lastEvent?: NormalizedInputEvent;
   } {
     return {

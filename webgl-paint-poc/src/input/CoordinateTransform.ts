@@ -1,27 +1,25 @@
 /**
  * 座標変換レイヤー
- * デバイス座標 ↔ Canvas座標 ↔ WebGL座標の変換を管理
+ * PointerEvent座標 → Canvas座標 → WebGL座標の変換を管理
  */
 
 import { Matrix3x3 } from '../math/Matrix3x3';
 import type {
-  DeviceCoordinates,
+  PointerCoordinates,
   CanvasCoordinates,
   WebGLCoordinates,
   ViewCoordinates,
-  CanvasBounds,
   ViewTransformState,
-  Point2D,
-  CoordinateTransformError,
 } from '../types/coordinates';
+import { CoordinateTransformError } from '../types/coordinates';
 
 /**
  * 座標変換インターface
  */
 export interface ICoordinateTransform {
   // 基本変換
-  deviceToCanvas(deviceCoords: DeviceCoordinates): CanvasCoordinates;
-  canvasToDevice(canvasCoords: CanvasCoordinates): DeviceCoordinates;
+  pointerToCanvas(pointerCoords: PointerCoordinates): CanvasCoordinates;
+  canvasToPointer(canvasCoords: CanvasCoordinates): PointerCoordinates;
   canvasToWebGL(canvasCoords: CanvasCoordinates): WebGLCoordinates;
   webGLToCanvas(webglCoords: WebGLCoordinates): CanvasCoordinates;
   
@@ -30,12 +28,11 @@ export interface ICoordinateTransform {
   viewToCanvas(viewCoords: ViewCoordinates): CanvasCoordinates;
   
   // 設定更新
-  updateCanvasBounds(bounds: CanvasBounds): void;
   updateViewTransform(viewState: ViewTransformState): void;
   
   // デバッグ用
   getTransformMatrices(): {
-    deviceToCanvas: Matrix3x3;
+    pointerToCanvas: Matrix3x3;
     canvasToWebGL: Matrix3x3;
     canvasToView: Matrix3x3;
   };
@@ -45,38 +42,31 @@ export interface ICoordinateTransform {
  * 座標変換の実装クラス
  */
 export class CoordinateTransform implements ICoordinateTransform {
-  private deviceToCanvasMatrix: Matrix3x3;
-  private canvasToDeviceMatrix: Matrix3x3;
-  private canvasToWebGLMatrix: Matrix3x3;
-  private webGLToCanvasMatrix: Matrix3x3;
-  private canvasToViewMatrix: Matrix3x3;
-  private viewToCanvasMatrix: Matrix3x3;
+  private pointerToCanvasMatrix: Matrix3x3 = new Matrix3x3();
+  private canvasToPointerMatrix: Matrix3x3 = new Matrix3x3();
+  private canvasToWebGLMatrix: Matrix3x3 = new Matrix3x3();
+  private webGLToCanvasMatrix: Matrix3x3 = new Matrix3x3();
+  private canvasToViewMatrix: Matrix3x3 = new Matrix3x3();
+  private viewToCanvasMatrix: Matrix3x3 = new Matrix3x3();
   
-  private canvasBounds: CanvasBounds;
+  private canvasElement: HTMLCanvasElement;
   private viewTransform: ViewTransformState;
 
   constructor(
-    canvasBounds: CanvasBounds,
+    canvasElement: HTMLCanvasElement,
     viewTransform: ViewTransformState = {
       zoom: 1.0,
       panOffset: { canvasX: 0, canvasY: 0 },
       rotation: 0,
     }
   ) {
-    this.canvasBounds = canvasBounds;
+    this.canvasElement = canvasElement;
     this.viewTransform = viewTransform;
     
     // 初期変換行列を計算
     this.updateTransformMatrices();
   }
 
-  /**
-   * Canvas要素の境界を更新
-   */
-  updateCanvasBounds(bounds: CanvasBounds): void {
-    this.canvasBounds = bounds;
-    this.updateDeviceCanvasTransform();
-  }
 
   /**
    * ビュー変換状態を更新
@@ -87,13 +77,13 @@ export class CoordinateTransform implements ICoordinateTransform {
   }
 
   /**
-   * デバイス座標 → Canvas座標
+   * PointerEvent座標 → Canvas座標
    */
-  deviceToCanvas(deviceCoords: DeviceCoordinates): CanvasCoordinates {
+  pointerToCanvas(pointerCoords: PointerCoordinates): CanvasCoordinates {
     try {
-      const point = this.deviceToCanvasMatrix.transformPoint(
-        deviceCoords.deviceX,
-        deviceCoords.deviceY
+      const point = this.pointerToCanvasMatrix.transformPoint(
+        pointerCoords.offsetX,
+        pointerCoords.offsetY
       );
       
       return {
@@ -101,33 +91,35 @@ export class CoordinateTransform implements ICoordinateTransform {
         canvasY: Math.max(0, Math.min(1024, point.y)),
       };
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       throw new CoordinateTransformError(
-        `Failed to transform device to canvas coordinates: ${error.message}`,
-        deviceCoords,
-        'device-to-canvas'
+        `Failed to transform pointer to canvas coordinates: ${message}`,
+        pointerCoords,
+        'pointer-to-canvas'
       );
     }
   }
 
   /**
-   * Canvas座標 → デバイス座標
+   * Canvas座標 → PointerEvent座標
    */
-  canvasToDevice(canvasCoords: CanvasCoordinates): DeviceCoordinates {
+  canvasToPointer(canvasCoords: CanvasCoordinates): PointerCoordinates {
     try {
-      const point = this.canvasToDeviceMatrix.transformPoint(
+      const point = this.canvasToPointerMatrix.transformPoint(
         canvasCoords.canvasX,
         canvasCoords.canvasY
       );
       
       return {
-        deviceX: point.x,
-        deviceY: point.y,
+        offsetX: point.x,
+        offsetY: point.y,
       };
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       throw new CoordinateTransformError(
-        `Failed to transform canvas to device coordinates: ${error.message}`,
+        `Failed to transform canvas to pointer coordinates: ${message}`,
         canvasCoords,
-        'canvas-to-device'
+        'canvas-to-pointer'
       );
     }
   }
@@ -147,8 +139,9 @@ export class CoordinateTransform implements ICoordinateTransform {
         webglY: Math.max(-1, Math.min(1, point.y)),
       };
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       throw new CoordinateTransformError(
-        `Failed to transform canvas to WebGL coordinates: ${error.message}`,
+        `Failed to transform canvas to WebGL coordinates: ${message}`,
         canvasCoords,
         'canvas-to-webgl'
       );
@@ -170,8 +163,9 @@ export class CoordinateTransform implements ICoordinateTransform {
         canvasY: Math.max(0, Math.min(1024, point.y)),
       };
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       throw new CoordinateTransformError(
-        `Failed to transform WebGL to canvas coordinates: ${error.message}`,
+        `Failed to transform WebGL to canvas coordinates: ${message}`,
         webglCoords,
         'webgl-to-canvas'
       );
@@ -193,8 +187,9 @@ export class CoordinateTransform implements ICoordinateTransform {
         viewY: point.y,
       };
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       throw new CoordinateTransformError(
-        `Failed to transform canvas to view coordinates: ${error.message}`,
+        `Failed to transform canvas to view coordinates: ${message}`,
         canvasCoords,
         'canvas-to-view'
       );
@@ -216,8 +211,9 @@ export class CoordinateTransform implements ICoordinateTransform {
         canvasY: Math.max(0, Math.min(1024, point.y)),
       };
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       throw new CoordinateTransformError(
-        `Failed to transform view to canvas coordinates: ${error.message}`,
+        `Failed to transform view to canvas coordinates: ${message}`,
         viewCoords,
         'view-to-canvas'
       );
@@ -229,7 +225,7 @@ export class CoordinateTransform implements ICoordinateTransform {
    */
   getTransformMatrices() {
     return {
-      deviceToCanvas: this.deviceToCanvasMatrix.clone(),
+      pointerToCanvas: this.pointerToCanvasMatrix.clone(),
       canvasToWebGL: this.canvasToWebGLMatrix.clone(),
       canvasToView: this.canvasToViewMatrix.clone(),
     };
@@ -239,26 +235,22 @@ export class CoordinateTransform implements ICoordinateTransform {
    * 全変換行列を更新
    */
   private updateTransformMatrices(): void {
-    this.updateDeviceCanvasTransform();
+    this.updatePointerCanvasTransform();
     this.updateCanvasWebGLTransform();
     this.updateCanvasViewTransform();
   }
 
   /**
-   * デバイス ↔ Canvas座標の変換行列を更新
+   * PointerEvent ↔ Canvas座標の変換行列を更新
    */
-  private updateDeviceCanvasTransform(): void {
-    // デバイス座標をCanvas要素内の相対座標に変換
-    const deviceToRelative = Matrix3x3.translation(-this.canvasBounds.left, -this.canvasBounds.top);
-    
+  private updatePointerCanvasTransform(): void {
     // Canvas要素の表示サイズを論理サイズ(1024x1024)にスケール
-    const relativeToCanvas = Matrix3x3.scale(
-      1024 / this.canvasBounds.width,
-      1024 / this.canvasBounds.height
-    );
+    // offsetX/Y はすでにCanvas要素内の相対座標なので、直接スケールするだけ
+    const scaleX = 1024 / this.canvasElement.offsetWidth;
+    const scaleY = 1024 / this.canvasElement.offsetHeight;
     
-    this.deviceToCanvasMatrix = relativeToCanvas.multiply(deviceToRelative);
-    this.canvasToDeviceMatrix = this.deviceToCanvasMatrix.inverse();
+    this.pointerToCanvasMatrix = Matrix3x3.scale(scaleX, scaleY);
+    this.canvasToPointerMatrix = this.pointerToCanvasMatrix.inverse();
   }
 
   /**

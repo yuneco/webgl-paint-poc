@@ -6,12 +6,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { InputProcessor, DEFAULT_INPUT_PROCESSOR_CONFIG } from './InputProcessor';
 import type { NormalizedInputEvent } from './InputEventHandler';
-import type { CanvasBounds, ViewTransformState } from '../types/coordinates';
+import type { ViewTransformState } from '../types/coordinates';
 
 describe('InputProcessor', () => {
   let processor: InputProcessor;
   let canvasElement: HTMLCanvasElement;
-  let canvasBounds: CanvasBounds;
   let eventCallback: ReturnType<typeof vi.fn>;
   let receivedEvents: NormalizedInputEvent[];
 
@@ -22,25 +21,9 @@ describe('InputProcessor', () => {
     canvasElement.height = 1024;
     document.body.appendChild(canvasElement);
 
-    // Mock getBoundingClientRect
-    vi.spyOn(canvasElement, 'getBoundingClientRect').mockReturnValue({
-      left: 100,
-      top: 150,
-      width: 200,
-      height: 200,
-      right: 300,
-      bottom: 350,
-      x: 100,
-      y: 150,
-      toJSON: () => ({}),
-    });
-
-    canvasBounds = {
-      left: 100,
-      top: 150,
-      width: 200,
-      height: 200,
-    };
+    // Canvas element has real offsetWidth/offsetHeight in browser mode
+    Object.defineProperty(canvasElement, 'offsetWidth', { value: 200, configurable: true });
+    Object.defineProperty(canvasElement, 'offsetHeight', { value: 200, configurable: true });
 
     // イベントコールバックのモック
     receivedEvents = [];
@@ -48,30 +31,9 @@ describe('InputProcessor', () => {
       receivedEvents.push(event);
     });
 
-    // PointerEvent のモック
-    // @ts-ignore - テスト用のモック
-    window.PointerEvent = class PointerEvent extends MouseEvent {
-        public pointerId: number;
-        public pointerType: string;
-        public pressure: number;
-        public tiltX: number;
-        public tiltY: number;
+    // Real PointerEvent and setPointerCapture/releasePointerCapture available in browser mode
 
-        constructor(type: string, options: any = {}) {
-          super(type, options);
-          this.pointerId = options.pointerId || 0;
-          this.pointerType = options.pointerType || 'mouse';
-          this.pressure = 'pressure' in options ? options.pressure : 0.5;
-          this.tiltX = options.tiltX || 0;
-          this.tiltY = options.tiltY || 0;
-        }
-      };
-
-    // setPointerCapture/releasePointerCapture のモック
-    canvasElement.setPointerCapture = vi.fn();
-    canvasElement.releasePointerCapture = vi.fn();
-
-    processor = new InputProcessor(canvasElement, canvasBounds);
+    processor = new InputProcessor(canvasElement);
     processor.setEventCallback(eventCallback);
   });
 
@@ -101,7 +63,6 @@ describe('InputProcessor', () => {
 
       const customProcessor = new InputProcessor(
         canvasElement,
-        canvasBounds,
         undefined,
         customConfig
       );
@@ -148,13 +109,14 @@ describe('InputProcessor', () => {
   describe('Input Event Processing', () => {
     it('should process basic pointer events', () => {
       const pointerEvent = new PointerEvent('pointerdown', {
-        clientX: 200, // Canvas中心
-        clientY: 250, // Canvas中心
         pointerId: 1,
         pointerType: 'pen',
         pressure: 0.8,
         buttons: 1,
       });
+      // Use offsetX/Y for canvas-relative coordinates
+      Object.defineProperty(pointerEvent, 'offsetX', { value: 100, configurable: true }); // Canvas center
+      Object.defineProperty(pointerEvent, 'offsetY', { value: 100, configurable: true }); // Canvas center
 
       canvasElement.dispatchEvent(pointerEvent);
 
@@ -170,34 +132,34 @@ describe('InputProcessor', () => {
     it('should apply throttling to move events', () => {
       // 開始イベント
       const downEvent = new PointerEvent('pointerdown', {
-        clientX: 150,
-        clientY: 200,
         pointerId: 1,
         pointerType: 'pen',
         pressure: 0.8,
         buttons: 1,
       });
+      Object.defineProperty(downEvent, 'offsetX', { value: 75, configurable: true });
+      Object.defineProperty(downEvent, 'offsetY', { value: 100, configurable: true });
       canvasElement.dispatchEvent(downEvent);
 
       // 短時間間隔での移動イベント
       const moveEvent1 = new PointerEvent('pointermove', {
-        clientX: 155,
-        clientY: 205,
         pointerId: 1,
         pointerType: 'pen',
         pressure: 0.8,
         buttons: 1,
       });
+      Object.defineProperty(moveEvent1, 'offsetX', { value: 80, configurable: true });
+      Object.defineProperty(moveEvent1, 'offsetY', { value: 105, configurable: true });
       canvasElement.dispatchEvent(moveEvent1);
 
       const moveEvent2 = new PointerEvent('pointermove', {
-        clientX: 160,
-        clientY: 210,
         pointerId: 1,
         pointerType: 'pen',
         pressure: 0.8,
         buttons: 1,
       });
+      Object.defineProperty(moveEvent2, 'offsetX', { value: 85, configurable: true });
+      Object.defineProperty(moveEvent2, 'offsetY', { value: 110, configurable: true });
       canvasElement.dispatchEvent(moveEvent2);
 
       // startイベントのみが通る（moveイベントは間引かれる）
@@ -211,25 +173,25 @@ describe('InputProcessor', () => {
 
       // 開始イベント
       const downEvent = new PointerEvent('pointerdown', {
-        clientX: 200,
-        clientY: 250,
         pointerId: 1,
         pointerType: 'pen',
         pressure: 0.8,
         buttons: 1,
       });
+      Object.defineProperty(downEvent, 'offsetX', { value: 100, configurable: true });
+      Object.defineProperty(downEvent, 'offsetY', { value: 125, configurable: true });
       canvasElement.dispatchEvent(downEvent);
 
       // 同じ座標・筆圧での移動イベント（間引きを回避するため十分な時間間隔を設ける）
       setTimeout(() => {
         const moveEvent = new PointerEvent('pointermove', {
-          clientX: 200,
-          clientY: 250,
           pointerId: 1,
           pointerType: 'pen',
           pressure: 0.8,
           buttons: 1,
         });
+        Object.defineProperty(moveEvent, 'offsetX', { value: 100, configurable: true });
+        Object.defineProperty(moveEvent, 'offsetY', { value: 125, configurable: true });
         canvasElement.dispatchEvent(moveEvent);
       }, 20);
 
@@ -243,46 +205,20 @@ describe('InputProcessor', () => {
       processor.updateConfig({ enableDuplicateFiltering: false });
 
       const downEvent = new PointerEvent('pointerdown', {
-        clientX: 200,
-        clientY: 250,
         pointerId: 1,
         pointerType: 'pen',
         pressure: 0.8,
         buttons: 1,
       });
+      Object.defineProperty(downEvent, 'offsetX', { value: 100, configurable: true });
+      Object.defineProperty(downEvent, 'offsetY', { value: 125, configurable: true });
       canvasElement.dispatchEvent(downEvent);
 
       expect(receivedEvents).toHaveLength(1);
     });
   });
 
-  describe('Bounds and Transform Updates', () => {
-    it('should update canvas bounds', () => {
-      const newBounds = {
-        left: 200,
-        top: 100,
-        width: 400,
-        height: 300,
-      };
-
-      processor.updateCanvasBounds(newBounds);
-
-      // 新しい境界で座標変換が動作することを確認
-      const pointerEvent = new PointerEvent('pointerdown', {
-        clientX: 200, // 新しいCanvas左端
-        clientY: 100, // 新しいCanvas上端
-        pointerId: 1,
-        buttons: 1,
-      });
-
-      canvasElement.dispatchEvent(pointerEvent);
-
-      expect(receivedEvents).toHaveLength(1);
-      const event = receivedEvents[0];
-      expect(event.position.canvasX).toBeCloseTo(0, 4);
-      expect(event.position.canvasY).toBeCloseTo(0, 4);
-    });
-
+  describe('Transform Updates', () => {
     it('should update view transform', () => {
       const viewTransform: ViewTransformState = {
         zoom: 2.0,
@@ -318,11 +254,11 @@ describe('InputProcessor', () => {
 
       // イベントを送信
       const pointerEvent = new PointerEvent('pointerdown', {
-        clientX: 200,
-        clientY: 250,
         pointerId: 1,
         buttons: 1,
       });
+      Object.defineProperty(pointerEvent, 'offsetX', { value: 100, configurable: true });
+      Object.defineProperty(pointerEvent, 'offsetY', { value: 125, configurable: true });
       canvasElement.dispatchEvent(pointerEvent);
 
       const finalStats = processor.getStats();
@@ -363,25 +299,25 @@ describe('InputProcessor', () => {
 
       // 開始イベント
       const downEvent = new PointerEvent('pointerdown', {
-        clientX: 200,
-        clientY: 250,
         pointerId: 1,
         pointerType: 'pen',
         pressure: 0.8,
         buttons: 1,
       });
+      Object.defineProperty(downEvent, 'offsetX', { value: 100, configurable: true });
+      Object.defineProperty(downEvent, 'offsetY', { value: 125, configurable: true });
       canvasElement.dispatchEvent(downEvent);
 
       // 十分な時間間隔・距離で微小筆圧変化の移動イベント
       setTimeout(() => {
         const moveEvent = new PointerEvent('pointermove', {
-          clientX: 250, // 十分な距離移動
-          clientY: 300,
           pointerId: 1,
           pointerType: 'pen',
           pressure: 0.81, // 微小な筆圧変化 (0.01 < 0.1)
           buttons: 1,
         });
+        Object.defineProperty(moveEvent, 'offsetX', { value: 125, configurable: true }); // 十分な距離移動
+        Object.defineProperty(moveEvent, 'offsetY', { value: 150, configurable: true });
         canvasElement.dispatchEvent(moveEvent);
       }, 50); // 十分な時間間隔
 
@@ -396,25 +332,25 @@ describe('InputProcessor', () => {
 
       // 開始イベント
       const downEvent = new PointerEvent('pointerdown', {
-        clientX: 200,
-        clientY: 250,
         pointerId: 1,
         pointerType: 'pen',
         pressure: 0.8,
         buttons: 1,
       });
+      Object.defineProperty(downEvent, 'offsetX', { value: 100, configurable: true });
+      Object.defineProperty(downEvent, 'offsetY', { value: 125, configurable: true });
       canvasElement.dispatchEvent(downEvent);
 
       // 十分な時間間隔・距離で大きな筆圧変化の移動イベント
       setTimeout(() => {
         const moveEvent = new PointerEvent('pointermove', {
-          clientX: 250, // 十分な距離移動
-          clientY: 300,
           pointerId: 1,
           pointerType: 'pen',
           pressure: 0.95, // 大きな筆圧変化 (0.15 > 0.1)
           buttons: 1,
         });
+        Object.defineProperty(moveEvent, 'offsetX', { value: 125, configurable: true }); // 十分な距離移動
+        Object.defineProperty(moveEvent, 'offsetY', { value: 150, configurable: true });
         canvasElement.dispatchEvent(moveEvent);
       }, 50); // 十分な時間間隔
 
@@ -441,18 +377,17 @@ describe('InputProcessor', () => {
 
       const processorWithTransform = new InputProcessor(
         canvasElement,
-        canvasBounds,
         viewTransform
       );
 
       processorWithTransform.setEventCallback(transformCallback);
 
       const pointerEvent = new PointerEvent('pointerdown', {
-        clientX: 200,
-        clientY: 250,
         pointerId: 1,
         buttons: 1,
       });
+      Object.defineProperty(pointerEvent, 'offsetX', { value: 100, configurable: true });
+      Object.defineProperty(pointerEvent, 'offsetY', { value: 125, configurable: true });
 
       canvasElement.dispatchEvent(pointerEvent);
 

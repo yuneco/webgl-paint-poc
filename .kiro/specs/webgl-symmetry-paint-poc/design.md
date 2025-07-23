@@ -30,7 +30,7 @@
 │                 │    │                  │    │                 │
 │ • Raw Events    │    │ • Drawing State  │    │ • WebGL Context │
 │ • Pressure      │    │ • Symmetry Config│    │ • Render Funcs  │
-│ • Device Coords │    │ • Performance    │    │ • Buffer Mgmt   │
+│ • Pointer Events│    │ • Performance    │    │ • Buffer Mgmt   │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
          │                       │                       ▲
          │                       │                       │
@@ -109,11 +109,12 @@ function createCoordinateTransform(viewState: ViewState): CoordinateTransform {
   // ViewStateから変換行列を生成
 }
 
-function transformDeviceToCanvas(
-  devicePoint: DevicePoint,
+function transformPointerToCanvas(
+  offsetX: number,
+  offsetY: number,
   transform: CoordinateTransform
 ): CanvasPoint {
-  // デバイス座標→Canvas座標（入力処理用）
+  // PointerEvent座標→Canvas座標（入力処理用）
 }
 
 function transformCanvasToWebGL(
@@ -123,11 +124,11 @@ function transformCanvasToWebGL(
   // Canvas座標→WebGL正規化座標（描画用）
 }
 
-function transformCanvasToDevice(
+function transformCanvasToPointer(
   canvasPoint: CanvasPoint,
   transform: CoordinateTransform
-): DevicePoint {
-  // Canvas座標→デバイス座標（UI表示用）
+): { offsetX: number; offsetY: number } {
+  // Canvas座標→PointerEvent座標（UI表示用）
 }
 ```
 
@@ -156,7 +157,7 @@ function normalizePointerEvent(
   event: PointerEvent,
   transform: CoordinateTransform
 ): CanvasPoint {
-  // デバイス座標→Canvas座標への変換を含む正規化
+  // PointerEvent座標→Canvas座標への変換を含む正規化
 }
 
 function applySmoothingToStroke(points: CanvasPoint[]): CanvasPoint[] {
@@ -478,14 +479,17 @@ interface VertexData {
 ```typescript
 // 座標系の統一的な管理
 interface CoordinateSystem {
-  // デバイス座標 (px) → Canvas座標 (0-1024)
-  deviceToCanvas(deviceX: number, deviceY: number): CanvasPoint;
+  // PointerEvent座標 → Canvas座標 (0-1024)
+  pointerToCanvas(offsetX: number, offsetY: number): CanvasPoint;
   // Canvas座標 (0-1024) → WebGL正規化座標 (-1 to 1)
   canvasToWebGL(canvasX: number, canvasY: number): WebGLPoint;
   // 逆変換: WebGL → Canvas
   webGLToCanvas(webglX: number, webglY: number): CanvasPoint;
-  // 逆変換: Canvas → デバイス
-  canvasToDevice(canvasX: number, canvasY: number): DevicePoint;
+  // 逆変換: Canvas → PointerEvent座標
+  canvasToPointer(
+    canvasX: number,
+    canvasY: number
+  ): { offsetX: number; offsetY: number };
 }
 
 // 使用例: 入力処理での座標変換
@@ -493,8 +497,8 @@ function handlePointerEvent(
   event: PointerEvent,
   coordinateSystem: CoordinateSystem
 ): CanvasPoint {
-  // デバイス座標を直接Canvas座標に変換
-  return coordinateSystem.deviceToCanvas(event.clientX, event.clientY);
+  // PointerEvent座標を直接Canvas座標に変換
+  return coordinateSystem.pointerToCanvas(event.offsetX, event.offsetY);
 }
 
 // 使用例: 描画処理での座標変換
@@ -509,37 +513,58 @@ function renderStrokePoints(
   // WebGL描画処理...
 }
 
-// 座標変換行列の管理
-class CoordinateTransformManager {
-  private viewMatrix: Matrix3x3;
-  private inverseViewMatrix: Matrix3x3;
+// 座標変換行列の管理（関数ベース）
+interface CoordinateTransformState {
+  viewMatrix: Matrix3x3;
+  inverseViewMatrix: Matrix3x3;
+  pointerToCanvasMatrix: Matrix3x3;
+  canvasToWebGLMatrix: Matrix3x3;
+}
 
-  constructor(viewState: ViewState) {
-    this.updateTransforms(viewState);
-  }
+function createCoordinateTransformState(
+  viewState: ViewState,
+  canvasElement: HTMLCanvasElement
+): CoordinateTransformState {
+  // ビュー変換行列を計算
+  const viewMatrix = calculateViewMatrix(viewState);
+  const inverseViewMatrix = viewMatrix.inverse();
 
-  updateTransforms(viewState: ViewState): void {
-    // ズーム・パン・回転を合成した変換行列を計算
-    this.viewMatrix = this.calculateViewMatrix(viewState);
-    this.inverseViewMatrix = this.viewMatrix.inverse();
-  }
+  // その他の変換行列を計算
+  const pointerToCanvasMatrix = calculatePointerToCanvasMatrix(canvasElement);
+  const canvasToWebGLMatrix = calculateCanvasToWebGLMatrix();
 
-  private calculateViewMatrix(viewState: ViewState): Matrix3x3 {
-    // 1. 平行移動行列 (パン)
-    const translation = Matrix3x3.translation(
-      viewState.panOffset.x,
-      viewState.panOffset.y
-    );
+  return {
+    viewMatrix,
+    inverseViewMatrix,
+    pointerToCanvasMatrix,
+    canvasToWebGLMatrix,
+  };
+}
 
-    // 2. スケール行列 (ズーム)
-    const scale = Matrix3x3.scale(viewState.zoomLevel, viewState.zoomLevel);
+function calculateViewMatrix(viewState: ViewState): Matrix3x3 {
+  // 1. 平行移動行列 (パン)
+  const translation = Matrix3x3.translation(
+    viewState.panOffset.x,
+    viewState.panOffset.y
+  );
 
-    // 3. 回転行列 (将来の拡張用)
-    const rotation = Matrix3x3.rotation(viewState.rotation || 0);
+  // 2. スケール行列 (ズーム)
+  const scale = Matrix3x3.scale(viewState.zoomLevel, viewState.zoomLevel);
 
-    // 合成: Scale * Rotation * Translation
-    return scale.multiply(rotation).multiply(translation);
-  }
+  // 3. 回転行列 (将来の拡張用)
+  const rotation = Matrix3x3.rotation(viewState.rotation || 0);
+
+  // 合成: Scale * Rotation * Translation
+  return scale.multiply(rotation).multiply(translation);
+}
+
+function updateCoordinateTransformState(
+  currentState: CoordinateTransformState,
+  newViewState: ViewState,
+  canvasElement: HTMLCanvasElement
+): CoordinateTransformState {
+  // 新しい状態を計算して返す（イミュータブル）
+  return createCoordinateTransformState(newViewState, canvasElement);
 }
 ```
 

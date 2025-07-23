@@ -7,10 +7,8 @@ import { WebGLRenderer } from '../webgl/WebGLRenderer';
 import { InputProcessor } from '../input/InputProcessor';
 import { SymmetryRenderer } from '../symmetry/symmetryRenderer';
 import { coreStore } from '../store/coreStore';
-import { uiStore } from '../store/uiStore';
 import type { NormalizedInputEvent } from '../input/InputEventHandler';
-import type { StrokeData, StrokePoint } from '../types/paint';
-import type { CanvasBounds } from '../types/coordinates';
+import type { StrokeData, StrokePoint } from '../types/core';
 
 /**
  * アプリケーション設定
@@ -44,8 +42,7 @@ export class PaintApp {
     this.symmetryRenderer = new SymmetryRenderer();
     
     // Input処理の初期化
-    const canvasBounds = this.getCanvasBounds();
-    this.inputProcessor = new InputProcessor(this.canvas, canvasBounds);
+    this.inputProcessor = new InputProcessor(this.canvas);
     this.inputProcessor.setEventCallback(this.handleInputEvent.bind(this));
     
     // ステート変更の監視
@@ -81,18 +78,6 @@ export class PaintApp {
     return canvas;
   }
 
-  /**
-   * Canvas境界を取得
-   */
-  private getCanvasBounds(): CanvasBounds {
-    const rect = this.canvas.getBoundingClientRect();
-    return {
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height,
-    };
-  }
 
   /**
    * ステート変更の監視を設定
@@ -190,6 +175,7 @@ export class PaintApp {
     const strokeData: StrokeData = {
       id: `stroke_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       points: [...this.currentStroke],
+      timestamp: Date.now(),
       metadata: {
         timestamp: Date.now(),
         deviceType: event.deviceType,
@@ -249,6 +235,7 @@ export class PaintApp {
     const tempStrokeData: StrokeData = {
       id: 'temp_stroke',
       points: [...this.currentStroke],
+      timestamp: Date.now(),
       metadata: {
         timestamp: Date.now(),
         deviceType: 'unknown',
@@ -291,12 +278,12 @@ export class PaintApp {
       }
       
       // 対称ストローク配列を取得 
-      const symmetryStrokes = Array.isArray(symmetryResult) ? symmetryResult : (symmetryResult?.symmetricStrokes || [stroke]);
+      const symmetryStrokes = symmetryResult;
       
       if (this.config.enableDebug) {
         console.log('Symmetry strokes count:', symmetryStrokes.length);
-        symmetryStrokes.forEach((symStroke, index) => {
-          console.log(`Symmetry stroke ${index}:`, symStroke.points.map(p => `(${p.x.toFixed(1)}, ${p.y.toFixed(1)})`));
+        symmetryStrokes.forEach((symStroke: StrokeData, index: number) => {
+          console.log(`Symmetry stroke ${index}:`, symStroke.points.map((p: StrokePoint) => `(${p.x.toFixed(1)}, ${p.y.toFixed(1)})`));
         });
       }
       
@@ -403,10 +390,6 @@ export class PaintApp {
     this.config.displaySize = size;
     this.canvas.style.width = `${size.width}px`;
     this.canvas.style.height = `${size.height}px`;
-    
-    // 境界を更新
-    const canvasBounds = this.getCanvasBounds();
-    this.inputProcessor.updateCanvasBounds(canvasBounds);
   }
 
   /**
@@ -439,7 +422,7 @@ export class PaintApp {
       symmetry: {
         ...prevState.symmetry,
         enabled: enabled !== undefined ? enabled : prevState.symmetry.enabled,
-        axisCount: axisCount !== undefined ? Math.max(2, Math.min(16, axisCount)) : prevState.symmetry.axisCount,
+        axisCount: axisCount !== undefined ? Math.max(2, Math.min(8, axisCount)) : prevState.symmetry.axisCount,
       }
     }));
     
