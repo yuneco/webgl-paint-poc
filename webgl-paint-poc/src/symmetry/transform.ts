@@ -25,7 +25,7 @@ export interface SymmetryTransform {
 // 定数
 export const SYMMETRY_CENTER: Point2D = { x: 512, y: 512 };
 export const AXIS_COUNT = 8;
-export const ANGLE_INCREMENT = Math.PI / 4; // 45度 = π/4 ラジアン
+export const ANGLE_INCREMENT = Math.PI / 4; // 45度 = π/4 ラジアン（反射軸用）
 
 /**
  * 度をラジアンに変換
@@ -42,14 +42,22 @@ export function radiansToDegrees(radians: number): number {
 }
 
 /**
- * 8軸対称の各軸の角度を計算 (ラジアン)
- * 軸0: 0度 (右), 軸1: 45度, 軸2: 90度 (上), ..., 軸7: 315度
+ * 8軸対称変換の定義 (二面体群 D8)
+ * 軸0-3: 反射変換 (0°, 45°, 90°, 135°の反射軸)
+ * 軸4-7: 回転変換 (0°, 90°, 180°, 270°の回転)
  */
 export function calculateSymmetryAxisAngle(axisIndex: number): number {
   if (axisIndex < 0 || axisIndex >= AXIS_COUNT) {
     throw new Error(`Invalid axis index: ${axisIndex}. Must be 0-${AXIS_COUNT - 1}`);
   }
-  return axisIndex * ANGLE_INCREMENT;
+  
+  if (axisIndex < 4) {
+    // 反射軸: 0°, 45°, 90°, 135°
+    return axisIndex * Math.PI / 4;
+  } else {
+    // 回転軸: 0°, 90°, 180°, 270°
+    return (axisIndex - 4) * Math.PI / 2;
+  }
 }
 
 /**
@@ -132,8 +140,8 @@ export function applyTransformToPoint(point: Point2D, matrix: TransformMatrix): 
 }
 
 /**
- * 8軸放射対称の変換行列を生成
- * 各軸について反射対称変換を行う
+ * 8軸対称の変換行列を生成 (二面体群 D8)
+ * 軸0-3: 反射変換, 軸4-7: 回転変換
  */
 export function create8AxisSymmetryTransform(axisIndex: number): SymmetryTransform {
   if (axisIndex < 0 || axisIndex >= AXIS_COUNT) {
@@ -144,16 +152,25 @@ export function create8AxisSymmetryTransform(axisIndex: number): SymmetryTransfo
   
   // 変換手順:
   // 1. 中心点を原点に移動  
-  // 2. 指定角度で回転
+  // 2. 反射または回転を適用
   // 3. 中心点を元の位置に戻す
   
   const centerToOrigin = createTranslationMatrix(-SYMMETRY_CENTER.x, -SYMMETRY_CENTER.y);
-  const rotation = createRotationMatrix(angle);
+  let transformation: TransformMatrix;
+  
+  if (axisIndex < 4) {
+    // 軸0-3: 反射変換
+    transformation = createReflectionMatrix(angle);
+  } else {
+    // 軸4-7: 回転変換
+    transformation = createRotationMatrix(angle);
+  }
+  
   const originToCenter = createTranslationMatrix(SYMMETRY_CENTER.x, SYMMETRY_CENTER.y);
   
   // 行列の合成（右から左に適用される）
   let matrix = centerToOrigin;
-  matrix = multiplyMatrices(rotation, matrix);
+  matrix = multiplyMatrices(transformation, matrix);
   matrix = multiplyMatrices(originToCenter, matrix);
   
   return {
@@ -184,13 +201,22 @@ export function transformPointByAxis(point: Point2D, axisIndex: number): Point2D
 
 /**
  * 点を全軸で対称変換（8つの対称点を生成）
+ * 注: 軸4（0度回転）は恒等変換なので除外し、元の点を含めて8つにする
  */
 export function transformPointToAllSymmetries(point: Point2D): Point2D[] {
   const symmetricPoints = [];
+  
+  // 元の点を含める
+  symmetricPoints.push(point);
+  
+  // 軸0-3（反射）と軸5-7（90°, 180°, 270°回転）を適用
   for (let i = 0; i < AXIS_COUNT; i++) {
+    if (i === 4) continue; // 軸4（0度回転）は恒等変換なので除外
+    
     const transformedPoint = transformPointByAxis(point, i);
     symmetricPoints.push(transformedPoint);
   }
+  
   return symmetricPoints;
 }
 
@@ -213,13 +239,22 @@ export function transformStrokePointByAxis(strokePoint: StrokePoint, axisIndex: 
 
 /**
  * StrokePointを全軸で対称変換
+ * 注: 軸4（0度回転）は恒等変換なので除外し、元の点を含めて8つにする
  */
 export function transformStrokePointToAllSymmetries(strokePoint: StrokePoint): StrokePoint[] {
   const symmetricPoints = [];
+  
+  // 元の点を含める
+  symmetricPoints.push(strokePoint);
+  
+  // 軸0-3（反射）と軸5-7（90°, 180°, 270°回転）を適用
   for (let i = 0; i < AXIS_COUNT; i++) {
+    if (i === 4) continue; // 軸4（0度回転）は恒等変換なので除外
+    
     const transformedPoint = transformStrokePointByAxis(strokePoint, i);
     symmetricPoints.push(transformedPoint);
   }
+  
   return symmetricPoints;
 }
 

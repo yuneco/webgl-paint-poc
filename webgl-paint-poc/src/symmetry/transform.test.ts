@@ -47,14 +47,17 @@ describe('Symmetry Transform (Browser Mode)', () => {
 
   describe('Symmetry Axis Calculations', () => {
     it('should calculate correct angles for 8-axis symmetry', () => {
+      // 軸0-3: 反射軸 (0°, 45°, 90°, 135°)
       expect(Transform.calculateSymmetryAxisAngle(0)).toBeCloseTo(0); // 0度
       expect(Transform.calculateSymmetryAxisAngle(1)).toBeCloseTo(Math.PI / 4); // 45度
       expect(Transform.calculateSymmetryAxisAngle(2)).toBeCloseTo(Math.PI / 2); // 90度
       expect(Transform.calculateSymmetryAxisAngle(3)).toBeCloseTo(3 * Math.PI / 4); // 135度
-      expect(Transform.calculateSymmetryAxisAngle(4)).toBeCloseTo(Math.PI); // 180度
-      expect(Transform.calculateSymmetryAxisAngle(5)).toBeCloseTo(5 * Math.PI / 4); // 225度
-      expect(Transform.calculateSymmetryAxisAngle(6)).toBeCloseTo(3 * Math.PI / 2); // 270度
-      expect(Transform.calculateSymmetryAxisAngle(7)).toBeCloseTo(7 * Math.PI / 4); // 315度
+      
+      // 軸4-7: 回転軸 (0°, 90°, 180°, 270°)
+      expect(Transform.calculateSymmetryAxisAngle(4)).toBeCloseTo(0); // 0度
+      expect(Transform.calculateSymmetryAxisAngle(5)).toBeCloseTo(Math.PI / 2); // 90度
+      expect(Transform.calculateSymmetryAxisAngle(6)).toBeCloseTo(Math.PI); // 180度
+      expect(Transform.calculateSymmetryAxisAngle(7)).toBeCloseTo(3 * Math.PI / 2); // 270度
     });
 
     it('should throw error for invalid axis index', () => {
@@ -67,10 +70,18 @@ describe('Symmetry Transform (Browser Mode)', () => {
       const angles = Transform.getAllSymmetryAxisAngles();
       expect(angles).toHaveLength(8);
       
-      // Check that angles are in 45-degree increments
-      for (let i = 0; i < 8; i++) {
-        expect(angles[i]).toBeCloseTo(i * Math.PI / 4);
-      }
+      // Check angles for both reflection and rotation axes
+      // 軸0-3: 反射軸 (0°, 45°, 90°, 135°)
+      expect(angles[0]).toBeCloseTo(0);
+      expect(angles[1]).toBeCloseTo(Math.PI / 4);
+      expect(angles[2]).toBeCloseTo(Math.PI / 2);
+      expect(angles[3]).toBeCloseTo(3 * Math.PI / 4);
+      
+      // 軸4-7: 回転軸 (0°, 90°, 180°, 270°)
+      expect(angles[4]).toBeCloseTo(0);
+      expect(angles[5]).toBeCloseTo(Math.PI / 2);
+      expect(angles[6]).toBeCloseTo(Math.PI);
+      expect(angles[7]).toBeCloseTo(3 * Math.PI / 2);
     });
   });
 
@@ -141,7 +152,16 @@ describe('Symmetry Transform (Browser Mode)', () => {
       for (let i = 0; i < 8; i++) {
         const transform = Transform.create8AxisSymmetryTransform(i);
         expect(transform.axisIndex).toBe(i);
-        expect(transform.angle).toBeCloseTo(i * Math.PI / 4);
+        
+        // Check correct angles for each axis type
+        if (i < 4) {
+          // 軸0-3: 反射軸
+          expect(transform.angle).toBeCloseTo(i * Math.PI / 4);
+        } else {
+          // 軸4-7: 回転軸
+          expect(transform.angle).toBeCloseTo((i - 4) * Math.PI / 2);
+        }
+        
         expect(transform.matrix).toBeDefined();
       }
     });
@@ -152,7 +172,15 @@ describe('Symmetry Transform (Browser Mode)', () => {
       
       transforms.forEach((transform, index) => {
         expect(transform.axisIndex).toBe(index);
-        expect(transform.angle).toBeCloseTo(index * Math.PI / 4);
+        
+        // Check correct angles for each axis type
+        if (index < 4) {
+          // 軸0-3: 反射軸
+          expect(transform.angle).toBeCloseTo(index * Math.PI / 4);
+        } else {
+          // 軸4-7: 回転軸
+          expect(transform.angle).toBeCloseTo((index - 4) * Math.PI / 2);
+        }
       });
     });
 
@@ -166,16 +194,20 @@ describe('Symmetry Transform (Browser Mode)', () => {
     it('should transform point by axis correctly', () => {
       const point: Point2D = { x: 612, y: 512 }; // 100 pixels right of center
       
-      // 軸0 (0度): X軸で反射 -> (412, 512) 100 pixels left of center  
+      // 軸0 (0度反射): 水平線で反射 -> Y座標が反転されるが、Y=512は中心線上なので変化なし
       const transformed0 = Transform.transformPointByAxis(point, 0);
-      expect(transformed0.x).toBeCloseTo(412, 1);
+      expect(transformed0.x).toBeCloseTo(612, 1);
       expect(transformed0.y).toBeCloseTo(512, 1);
       
-      // 軸2 (90度): 水平線で反射 -> Y座標が反転される
+      // 軸2 (90度反射): 垂直線で反射 -> X座標が反転される -> (412, 512)
       const transformed2 = Transform.transformPointByAxis(point, 2);
-      // 軸2は90度なので水平線での反射：(612,512) -> (612,512) (Y座標が中心線上なので変化なし)
-      expect(transformed2.x).toBeCloseTo(612, 1);
+      expect(transformed2.x).toBeCloseTo(412, 1);
       expect(transformed2.y).toBeCloseTo(512, 1);
+      
+      // 軸5 (90度回転): 点(100,0)が(0,100)に回転 -> (512, 612)
+      const transformed5 = Transform.transformPointByAxis(point, 5);
+      expect(transformed5.x).toBeCloseTo(512, 1);
+      expect(transformed5.y).toBeCloseTo(612, 1);
     });
 
     it('should preserve center point under all transformations', () => {
@@ -219,9 +251,9 @@ describe('Symmetry Transform (Browser Mode)', () => {
         timestamp: 1234567890
       };
       
-      const transformed = Transform.transformStrokePointByAxis(strokePoint, 0);
+      const transformed = Transform.transformStrokePointByAxis(strokePoint, 2);
       
-      // Position should be transformed (axis 0 flips X coordinate)
+      // Position should be transformed (axis 2 is 90° vertical reflection, flips X coordinate)
       expect(transformed.x).toBeCloseTo(412, 1); // X should be flipped
       expect(transformed.y).toBeCloseTo(412, 1); // Y should remain same
       
@@ -254,25 +286,29 @@ describe('Symmetry Transform (Browser Mode)', () => {
     it('should satisfy symmetry properties', () => {
       const testPoint: Point2D = { x: 600, y: 400 };
       
-      // Apply transformation twice should return to a predictable location
       // For reflection symmetry, applying the same transform twice should return to original
-      for (let axis = 0; axis < 8; axis++) {
+      // Test only reflection axes (0-3), not rotation axes (5-7)
+      for (let axis = 0; axis < 4; axis++) {
         const once = Transform.transformPointByAxis(testPoint, axis);
         const twice = Transform.transformPointByAxis(once, axis);
         
         // Applying the same reflection twice should return to original
         expect(Transform.arePointsNearlyEqual(twice, testPoint, 1e-6)).toBe(true);
       }
+      
+      // For rotation axes, test specific properties
+      // 180° rotation applied twice should return to original
+      const once180 = Transform.transformPointByAxis(testPoint, 6);
+      const twice180 = Transform.transformPointByAxis(once180, 6);
+      expect(Transform.arePointsNearlyEqual(twice180, testPoint, 1e-6)).toBe(true);
     });
 
     it('should maintain distances from center', () => {
       const testPoints: Point2D[] = [
-        { x: 612, y: 512 }, // Right
-        { x: 512, y: 412 }, // Up  
-        { x: 412, y: 512 }, // Left
-        { x: 512, y: 612 }, // Down
+        { x: 550, y: 450 }, // Off-axis point
+        { x: 580, y: 480 }, // Another off-axis point
         { x: 600, y: 400 }, // Diagonal
-        { x: 700, y: 300 }  // Further diagonal
+        { x: 520, y: 530 }  // Near center off-axis
       ];
       
       testPoints.forEach(testPoint => {
@@ -282,6 +318,8 @@ describe('Symmetry Transform (Browser Mode)', () => {
         );
         
         for (let axis = 0; axis < 8; axis++) {
+          if (axis === 4) continue; // Skip identity transformation
+          
           const transformed = Transform.transformPointByAxis(testPoint, axis);
           const transformedDistance = Math.sqrt(
             Math.pow(transformed.x - Transform.SYMMETRY_CENTER.x, 2) + 
@@ -294,8 +332,8 @@ describe('Symmetry Transform (Browser Mode)', () => {
     });
 
     it('should generate symmetric patterns with known coordinates', () => {
-      // Test with a point at known position
-      const testPoint: Point2D = { x: 612, y: 512 }; // 100 pixels right of center
+      // Test with a point that has no special relationship to any symmetry axis
+      const testPoint: Point2D = { x: 550, y: 450 }; // Offset from center: (38, -62)
       const symmetricPoints = Transform.transformPointToAllSymmetries(testPoint);
       
       // Expected positions for 8-axis radial symmetry
@@ -307,9 +345,34 @@ describe('Symmetry Transform (Browser Mode)', () => {
         uniquePoints.add(`${Math.round(p.x)},${Math.round(p.y)}`);
       });
       
-      // Should have 8 unique positions (or fewer if some overlap due to symmetry)
-      expect(uniquePoints.size).toBeGreaterThanOrEqual(4);
-      expect(uniquePoints.size).toBeLessThanOrEqual(8);
+      // Should have exactly 8 unique positions for true 8-axis symmetry
+      // (unless the point is on a symmetry axis, but our test point is not)
+      expect(uniquePoints.size).toBe(8);
+    });
+
+    it('should generate exactly 8 unique positions for off-axis points', () => {
+      // Test with a point that has no special relationship to any symmetry axis
+      const testPoint: Point2D = { x: 550, y: 450 }; // Offset from center: (38, -62)
+      const symmetricPoints = Transform.transformPointToAllSymmetries(testPoint);
+      
+      expect(symmetricPoints).toHaveLength(8);
+      
+      // Check that all 8 positions are unique
+      const uniquePositions = new Set();
+      symmetricPoints.forEach(p => {
+        const roundedPos = `${Math.round(p.x)},${Math.round(p.y)}`;
+        uniquePositions.add(roundedPos);
+      });
+      
+      expect(uniquePositions.size).toBe(8);
+      
+      // Log the actual positions for debugging
+      const positions = Array.from(uniquePositions);
+      console.log('Generated 8-axis symmetry positions:', positions);
+      
+      // The original point should be explicitly included in our implementation
+      const originalPos = `${Math.round(testPoint.x)},${Math.round(testPoint.y)}`;
+      expect(positions).toContain(originalPos);
     });
   });
 
