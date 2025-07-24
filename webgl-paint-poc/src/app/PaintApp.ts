@@ -30,13 +30,10 @@ export class PaintApp {
   private renderer: WebGLRenderer;
   private inputProcessor: InputProcessor;
   private symmetryRenderer: SymmetryRenderer;
-  
-  private currentStroke: StrokePoint[] = [];
-  private isDrawing: boolean = false;
-  private config: PaintAppConfig;
 
   constructor(config: PaintAppConfig) {
-    this.config = config;
+    // Store configuration in Zustand store
+    coreStore.getState().updateConfig(config);
     this.canvas = this.initializeCanvas();
     this.renderer = new WebGLRenderer(this.canvas);
     this.symmetryRenderer = new SymmetryRenderer();
@@ -51,7 +48,7 @@ export class PaintApp {
     // 初期描画
     this.render();
     
-    if (this.config.enableDebug) {
+    if (coreStore.getState().appConfig.enableDebug) {
       this.setupDebugInfo();
     }
   }
@@ -60,9 +57,10 @@ export class PaintApp {
    * Canvas要素を初期化
    */
   private initializeCanvas(): HTMLCanvasElement {
-    const canvas = document.getElementById(this.config.canvasId) as HTMLCanvasElement;
+    const config = coreStore.getState().appConfig;
+    const canvas = document.getElementById(config.canvasId) as HTMLCanvasElement;
     if (!canvas) {
-      throw new Error(`Canvas element with id "${this.config.canvasId}" not found`);
+      throw new Error(`Canvas element with id "${config.canvasId}" not found`);
     }
     
     // Canvas論理サイズを設定
@@ -70,8 +68,8 @@ export class PaintApp {
     canvas.height = 1024;
     
     // Canvas表示サイズを設定
-    canvas.style.width = `${this.config.displaySize.width}px`;
-    canvas.style.height = `${this.config.displaySize.height}px`;
+    canvas.style.width = `${config.displaySize.width}px`;
+    canvas.style.height = `${config.displaySize.height}px`;
     canvas.style.border = '1px solid #ccc';
     canvas.style.cursor = 'crosshair';
     
@@ -87,7 +85,7 @@ export class PaintApp {
     coreStore.subscribe(
       (state) => state.symmetry,
       (symmetryState) => {
-        if (this.config.enableDebug) {
+        if (coreStore.getState().appConfig.enableDebug) {
           console.log('Symmetry state changed:', symmetryState);
         }
         // 対称設定変更時に再描画
@@ -99,7 +97,7 @@ export class PaintApp {
     coreStore.subscribe(
       (state) => state.view,
       (viewState) => {
-        if (this.config.enableDebug) {
+        if (coreStore.getState().appConfig.enableDebug) {
           console.log('View state changed:', viewState);
         }
         // ビュー変換を入力処理に反映
@@ -113,7 +111,7 @@ export class PaintApp {
    * 入力イベントハンドラー
    */
   private handleInputEvent(event: NormalizedInputEvent): void {
-    if (this.config.enableDebug) {
+    if (coreStore.getState().appConfig.enableDebug) {
       console.log('Input event:', event);
     }
 
@@ -134,13 +132,10 @@ export class PaintApp {
    * ストローク開始
    */
   private startStroke(event: NormalizedInputEvent): void {
-    this.isDrawing = true;
-    this.currentStroke = [this.eventToStrokePoint(event)];
+    const strokePoint = this.eventToStrokePoint(event);
+    coreStore.getState().startDrawing(strokePoint);
     
-    // ストローク開始をステートに記録
-    // Note: startStroke action is not implemented yet, skipping for now
-    
-    if (this.config.enableDebug) {
+    if (coreStore.getState().appConfig.enableDebug) {
       console.log('Stroke started at:', event.position);
     }
   }
@@ -149,16 +144,18 @@ export class PaintApp {
    * ストローク継続
    */
   private continueStroke(event: NormalizedInputEvent): void {
-    if (!this.isDrawing) return;
+    const state = coreStore.getState();
+    if (!state.drawingEngine.isDrawing) return;
     
     const strokePoint = this.eventToStrokePoint(event);
-    this.currentStroke.push(strokePoint);
+    state.continueDrawing(strokePoint);
     
     // リアルタイム描画
     this.renderCurrentStroke();
     
-    if (this.config.enableDebug && this.currentStroke.length % 5 === 0) {
-      console.log(`Stroke continues, ${this.currentStroke.length} points`);
+    const updatedState = coreStore.getState();
+    if (updatedState.appConfig.enableDebug && updatedState.drawingEngine.currentStroke.length % 5 === 0) {
+      console.log(`Stroke continues, ${updatedState.drawingEngine.currentStroke.length} points`);
     }
   }
 
@@ -166,44 +163,17 @@ export class PaintApp {
    * ストローク終了
    */
   private endStroke(event: NormalizedInputEvent): void {
-    if (!this.isDrawing) return;
+    const state = coreStore.getState();
+    if (!state.drawingEngine.isDrawing) return;
     
     const strokePoint = this.eventToStrokePoint(event);
-    this.currentStroke.push(strokePoint);
-    
-    // ストロークデータを作成
-    const strokeData: StrokeData = {
-      id: `stroke_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      points: [...this.currentStroke],
-      timestamp: Date.now(),
-      metadata: {
-        timestamp: Date.now(),
-        deviceType: event.deviceType,
-        totalPoints: this.currentStroke.length,
-      },
-    };
-    
-    // ストローク終了をステートに記録
-    // For now, directly add to history
-    const state = coreStore.getState();
-    const newStrokes = [...state.history.strokes, strokeData];
-    coreStore.setState((prevState) => ({
-      ...prevState,
-      history: {
-        ...prevState.history,
-        strokes: newStrokes,
-        historyIndex: newStrokes.length,
-      }
-    }));
-    
-    this.isDrawing = false;
-    this.currentStroke = [];
+    state.endDrawing(strokePoint);
     
     // 最終描画
     this.render();
     
-    if (this.config.enableDebug) {
-      console.log('Stroke completed:', strokeData);
+    if (state.appConfig.enableDebug) {
+      console.log('Stroke completed at:', event.position);
     }
   }
 
@@ -223,7 +193,10 @@ export class PaintApp {
    * 現在のストロークをリアルタイム描画
    */
   private renderCurrentStroke(): void {
-    if (this.currentStroke.length < 2) return;
+    const state = coreStore.getState();
+    const currentStroke = state.drawingEngine.currentStroke;
+    
+    if (currentStroke.length < 2) return;
     
     // 既存の描画をクリア
     this.renderer.clear();
@@ -234,12 +207,12 @@ export class PaintApp {
     // 現在のストロークを描画
     const tempStrokeData: StrokeData = {
       id: 'temp_stroke',
-      points: [...this.currentStroke],
+      points: [...currentStroke],
       timestamp: Date.now(),
       metadata: {
         timestamp: Date.now(),
         deviceType: 'unknown',
-        totalPoints: this.currentStroke.length,
+        totalPoints: currentStroke.length,
       },
     };
     
@@ -272,7 +245,7 @@ export class PaintApp {
         symmetryConfig
       );
       
-      if (this.config.enableDebug) {
+      if (coreStore.getState().appConfig.enableDebug) {
         console.log('Symmetry result:', symmetryResult);
         console.log('Symmetry config:', symmetryConfig);
       }
@@ -280,7 +253,7 @@ export class PaintApp {
       // 対称ストローク配列を取得 
       const symmetryStrokes = symmetryResult;
       
-      if (this.config.enableDebug) {
+      if (coreStore.getState().appConfig.enableDebug) {
         console.log('Symmetry strokes count:', symmetryStrokes.length);
         symmetryStrokes.forEach((symStroke: StrokeData, index: number) => {
           console.log(`Symmetry stroke ${index}:`, symStroke.points.map((p: StrokePoint) => `(${p.x.toFixed(1)}, ${p.y.toFixed(1)})`));
@@ -343,8 +316,8 @@ export class PaintApp {
     const debugInfo = {
       'Drawing': {
         'Strokes': coreState.history.strokes.length,
-        'Is Drawing': this.isDrawing,
-        'Current Points': this.currentStroke.length,
+        'Is Drawing': coreState.drawingEngine.isDrawing,
+        'Current Points': coreState.drawingEngine.currentStroke.length,
       },
       'Symmetry': {
         'Enabled': coreState.symmetry.enabled,
@@ -387,7 +360,7 @@ export class PaintApp {
    * Canvas表示サイズを更新
    */
   public updateDisplaySize(size: { width: number; height: number }): void {
-    this.config.displaySize = size;
+    coreStore.getState().setDisplaySize(size);
     this.canvas.style.width = `${size.width}px`;
     this.canvas.style.height = `${size.height}px`;
   }
@@ -396,18 +369,10 @@ export class PaintApp {
    * キャンバスをクリア
    */
   public clearCanvas(): void {
-    // Clear the history directly
-    coreStore.setState((prevState) => ({
-      ...prevState,
-      history: {
-        ...prevState.history,
-        strokes: [],
-        historyIndex: 0,
-      }
-    }));
+    coreStore.getState().clearHistory();
     this.renderer.clear();
     
-    if (this.config.enableDebug) {
+    if (coreStore.getState().appConfig.enableDebug) {
       console.log('Canvas cleared');
     }
   }
@@ -416,17 +381,14 @@ export class PaintApp {
    * 対称設定を更新
    */
   public updateSymmetry(enabled: boolean, axisCount?: number): void {
-    // Update symmetry settings directly
-    coreStore.setState((prevState) => ({
-      ...prevState,
-      symmetry: {
-        ...prevState.symmetry,
-        enabled: enabled !== undefined ? enabled : prevState.symmetry.enabled,
-        axisCount: axisCount !== undefined ? Math.max(2, Math.min(8, axisCount)) : prevState.symmetry.axisCount,
-      }
-    }));
+    const store = coreStore.getState();
+    store.setSymmetryEnabled(enabled);
     
-    if (this.config.enableDebug) {
+    if (axisCount !== undefined) {
+      store.setAxisCount(Math.max(2, Math.min(8, axisCount)));
+    }
+    
+    if (store.appConfig.enableDebug) {
       console.log('Symmetry updated:', { enabled, axisCount });
     }
   }
@@ -444,7 +406,7 @@ export class PaintApp {
       debugContainer.remove();
     }
     
-    if (this.config.enableDebug) {
+    if (coreStore.getState().appConfig.enableDebug) {
       console.log('PaintApp destroyed');
     }
   }
@@ -453,11 +415,12 @@ export class PaintApp {
    * 現在の状態を取得（デバッグ用）
    */
   public getDebugState(): any {
+    const state = coreStore.getState();
     return {
-      isDrawing: this.isDrawing,
-      currentStrokePoints: this.currentStroke.length,
-      config: this.config,
-      coreState: coreStore.getState(),
+      isDrawing: state.drawingEngine.isDrawing,
+      currentStrokePoints: state.drawingEngine.currentStroke.length,
+      config: state.appConfig,
+      coreState: state,
       inputStats: this.inputProcessor.getStats(),
     };
   }
