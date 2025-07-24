@@ -5,7 +5,7 @@
 
 import { WebGLRenderer } from '../webgl/WebGLRenderer';
 import { InputProcessor } from '../input/InputProcessor';
-import { SymmetryRenderer } from '../symmetry/symmetryRenderer';
+import { generateSymmetricStrokes } from '../symmetry/symmetryRenderer';
 import { coreStore } from '../store/coreStore';
 import type { NormalizedInputEvent } from '../input/InputEventHandler';
 import type { StrokeData, StrokePoint } from '../types/core';
@@ -29,14 +29,12 @@ export class PaintApp {
   private canvas: HTMLCanvasElement;
   private renderer: WebGLRenderer;
   private inputProcessor: InputProcessor;
-  private symmetryRenderer: SymmetryRenderer;
 
   constructor(config: PaintAppConfig) {
     // Store configuration in Zustand store
     coreStore.getState().updateConfig(config);
     this.canvas = this.initializeCanvas();
     this.renderer = new WebGLRenderer(this.canvas);
-    this.symmetryRenderer = new SymmetryRenderer();
     
     // Input処理の初期化
     this.inputProcessor = new InputProcessor(this.canvas);
@@ -240,18 +238,15 @@ export class PaintApp {
     
     if (symmetryConfig.enabled && symmetryConfig.axisCount > 1) {
       // 対称描画
-      const symmetryResult = this.symmetryRenderer.generateSymmetryStrokes(
+      const symmetryStrokes = generateSymmetricStrokes(
         stroke,
         symmetryConfig
-      );
+      ).symmetricStrokes;
       
       if (coreStore.getState().appConfig.enableDebug) {
-        console.log('Symmetry result:', symmetryResult);
+        console.log('Symmetry strokes:', symmetryStrokes);
         console.log('Symmetry config:', symmetryConfig);
       }
-      
-      // 対称ストローク配列を取得 
-      const symmetryStrokes = symmetryResult;
       
       if (coreStore.getState().appConfig.enableDebug) {
         console.log('Symmetry strokes count:', symmetryStrokes.length);

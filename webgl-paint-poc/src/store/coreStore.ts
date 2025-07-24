@@ -52,6 +52,11 @@ const initialCoreState: CoreState = {
     displaySize: { width: 500, height: 500 },
     enableDebug: false,
   },
+  inputProcessor: {
+    lastEvent: undefined,
+    eventCount: 0,
+    sessionStartTime: undefined,
+  },
 };
 
 /**
@@ -99,6 +104,12 @@ export interface CoreStoreState extends CoreState {
   setDisplaySize: (size: { width: number; height: number }) => void;
   setDebugMode: (enabled: boolean) => void;
   updateConfig: (config: Partial<import('../types/state').AppConfigState>) => void;
+
+  // Input Processor Actions
+  updateLastEvent: (event: import('../input/InputEventHandler').NormalizedInputEvent) => void;
+  incrementEventCount: () => void;
+  resetInputProcessor: () => void;
+  setSessionStartTime: (timestamp: number) => void;
 
   // Utility Actions
   reset: () => void;
@@ -567,6 +578,63 @@ export const coreStore = createStore<CoreStoreState>()(
       },
 
       // =============================================================================
+      // INPUT PROCESSOR ACTIONS
+      // =============================================================================
+
+      updateLastEvent: (event) => {
+        set(
+          (state) => ({
+            inputProcessor: {
+              ...state.inputProcessor,
+              lastEvent: event,
+            },
+          }),
+          false,
+          'updateLastEvent'
+        );
+      },
+
+      incrementEventCount: () => {
+        set(
+          (state) => ({
+            inputProcessor: {
+              ...state.inputProcessor,
+              eventCount: state.inputProcessor.eventCount + 1,
+            },
+          }),
+          false,
+          'incrementEventCount'
+        );
+      },
+
+      resetInputProcessor: () => {
+        set(
+          () => ({
+            inputProcessor: {
+              lastEvent: undefined,
+              eventCount: 0,
+              sessionStartTime: Date.now(),
+            },
+          }),
+          false,
+          'resetInputProcessor'
+        );
+      },
+
+      setSessionStartTime: (timestamp) => {
+        set(
+          (state) => ({
+            inputProcessor: {
+              ...state.inputProcessor,
+              sessionStartTime: timestamp,
+            },
+          }),
+          false,
+          'setSessionStartTime'
+        );
+      },
+
+      // =============================================================================
       // UTILITY ACTIONS
       // =============================================================================
 
@@ -637,4 +705,10 @@ export const coreSelectors = {
   canvasId: () => coreStore.getState().appConfig.canvasId,
   displaySize: () => coreStore.getState().appConfig.displaySize,
   debugMode: () => coreStore.getState().appConfig.enableDebug,
+
+  // Input Processor Selectors
+  inputProcessor: () => coreStore.getState().inputProcessor,
+  lastEvent: () => coreStore.getState().inputProcessor.lastEvent,
+  eventCount: () => coreStore.getState().inputProcessor.eventCount,
+  sessionStartTime: () => coreStore.getState().inputProcessor.sessionStartTime,
 };

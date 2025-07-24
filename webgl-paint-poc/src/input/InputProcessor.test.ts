@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { InputProcessor, DEFAULT_INPUT_PROCESSOR_CONFIG } from './InputProcessor';
 import type { NormalizedInputEvent } from './InputEventHandler';
 import type { ViewTransformState } from '../types/coordinates';
+import { coreStore } from '../store/coreStore';
 
 describe('InputProcessor', () => {
   let processor: InputProcessor;
@@ -15,6 +16,9 @@ describe('InputProcessor', () => {
   let receivedEvents: NormalizedInputEvent[];
 
   beforeEach(() => {
+    // Zustand ストアをリセット
+    coreStore.getState().reset();
+    
     // Mock Canvas要素
     canvasElement = document.createElement('canvas');
     canvasElement.width = 1024;
@@ -229,8 +233,8 @@ describe('InputProcessor', () => {
       processor.updateViewTransform(viewTransform);
 
       // ビュー変換が適用されることを確認
-      const coordinateTransform = processor.getCoordinateTransform();
-      expect(coordinateTransform).toBeDefined();
+      const coordinateTransformDebugInfo = processor.getCoordinateTransformDebugInfo();
+      expect(coordinateTransformDebugInfo).toBeDefined();
     });
   });
 

@@ -5,6 +5,7 @@
 
 import type { StrokeData, StrokePoint } from './core';
 import type { ViewTransformState } from './coordinates';
+import type { NormalizedInputEvent } from '../input/InputEventHandler';
 
 // =============================================================================
 // CORE STATE - アプリケーションの本質的な状態
@@ -96,6 +97,18 @@ export interface AppConfigState {
 }
 
 /**
+ * 入力処理の状態
+ */
+export interface InputProcessorState {
+  /** 最後に処理されたイベント */
+  lastEvent?: NormalizedInputEvent;
+  /** 処理されたイベントの総数 */
+  eventCount: number;
+  /** 入力処理開始時刻 */
+  sessionStartTime?: number;
+}
+
+/**
  * コアアプリケーションステート
  * UIに依存しない、アプリケーションの本質的な状態
  */
@@ -106,6 +119,7 @@ export interface CoreState {
   history: DrawingHistoryState;
   performance: PerformanceState;
   appConfig: AppConfigState;
+  inputProcessor: InputProcessorState;
 }
 
 // =============================================================================
@@ -253,6 +267,16 @@ export interface AppConfigActions {
 }
 
 /**
+ * 入力処理関連のアクション
+ */
+export interface InputProcessorActions {
+  updateLastEvent: (event: NormalizedInputEvent) => void;
+  incrementEventCount: () => void;
+  resetInputProcessor: () => void;
+  setSessionStartTime: (timestamp: number) => void;
+}
+
+/**
  * 全アクションの統合
  */
 export interface AppActions {
@@ -263,4 +287,5 @@ export interface AppActions {
   ui: UIActions;
   performance: PerformanceActions;
   appConfig: AppConfigActions;
+  inputProcessor: InputProcessorActions;
 }

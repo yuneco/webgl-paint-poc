@@ -3,7 +3,11 @@
  * マウス、タッチ、ペンの入力を統一的に処理
  */
 
-import { CoordinateTransform } from './CoordinateTransform';
+import {
+  transformPointerToCanvas,
+  createCanvasDisplayInfo,
+  getTransformMatricesDebugInfo,
+} from './coordinateTransformFunctions';
 import type {
   PointerCoordinates,
   CanvasCoordinates,
@@ -41,7 +45,7 @@ export type InputEventCallback = (event: NormalizedInputEvent) => void;
  */
 export class InputEventHandler {
   private canvasElement: HTMLCanvasElement;
-  private coordinateTransform: CoordinateTransform;
+  private viewTransform: ViewTransformState;
   private eventCallback?: InputEventCallback;
   private isCapturing: boolean = false;
   private activePointers: Map<number, { startTime: number; startPosition: CanvasCoordinates }> = new Map();
@@ -55,7 +59,7 @@ export class InputEventHandler {
     }
   ) {
     this.canvasElement = canvasElement;
-    this.coordinateTransform = new CoordinateTransform(canvasElement, viewTransform);
+    this.viewTransform = viewTransform;
     
     this.setupEventListeners();
   }
@@ -72,7 +76,7 @@ export class InputEventHandler {
    * ビュー変換を更新
    */
   updateViewTransform(viewTransform: ViewTransformState): void {
-    this.coordinateTransform.updateViewTransform(viewTransform);
+    this.viewTransform = viewTransform;
   }
 
   /**
@@ -157,7 +161,8 @@ export class InputEventHandler {
       offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
+    const canvasDisplay = createCanvasDisplayInfo(this.canvasElement);
+    const canvasCoords = transformPointerToCanvas(pointerCoords, canvasDisplay);
     
     // アクティブポインターを記録
     this.activePointers.set(event.pointerId, {
@@ -201,7 +206,8 @@ export class InputEventHandler {
       offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
+    const canvasDisplay = createCanvasDisplayInfo(this.canvasElement);
+    const canvasCoords = transformPointerToCanvas(pointerCoords, canvasDisplay);
     
     const normalizedEvent: NormalizedInputEvent = {
       position: canvasCoords,
@@ -241,7 +247,8 @@ export class InputEventHandler {
       offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
+    const canvasDisplay = createCanvasDisplayInfo(this.canvasElement);
+    const canvasCoords = transformPointerToCanvas(pointerCoords, canvasDisplay);
     
     const normalizedEvent: NormalizedInputEvent = {
       position: canvasCoords,
@@ -290,7 +297,8 @@ export class InputEventHandler {
       offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
+    const canvasDisplay = createCanvasDisplayInfo(this.canvasElement);
+    const canvasCoords = transformPointerToCanvas(pointerCoords, canvasDisplay);
     
     const normalizedEvent: NormalizedInputEvent = {
       position: canvasCoords,
@@ -320,7 +328,8 @@ export class InputEventHandler {
       offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
+    const canvasDisplay = createCanvasDisplayInfo(this.canvasElement);
+    const canvasCoords = transformPointerToCanvas(pointerCoords, canvasDisplay);
     
     const normalizedEvent: NormalizedInputEvent = {
       position: canvasCoords,
@@ -349,7 +358,8 @@ export class InputEventHandler {
       offsetY: event.offsetY,
     };
     
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
+    const canvasDisplay = createCanvasDisplayInfo(this.canvasElement);
+    const canvasCoords = transformPointerToCanvas(pointerCoords, canvasDisplay);
     
     const normalizedEvent: NormalizedInputEvent = {
       position: canvasCoords,
@@ -415,9 +425,10 @@ export class InputEventHandler {
   }
 
   /**
-   * 座標変換インスタンスを取得（デバッグ用）
+   * 座標変換のデバッグ情報を取得（デバッグ用）
    */
-  public getCoordinateTransform(): CoordinateTransform {
-    return this.coordinateTransform;
+  public getCoordinateTransformDebugInfo() {
+    const canvasDisplay = createCanvasDisplayInfo(this.canvasElement);
+    return getTransformMatricesDebugInfo(canvasDisplay, this.viewTransform);
   }
 }
