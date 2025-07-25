@@ -362,6 +362,142 @@ interface VertexData {
 - リアルタイムシェーダー編集機能
 - パフォーマンスプロファイラー統合
 
+## 入力補正システム設計（タスク 6.6 対応）
+
+### 設計原則
+
+**関数ベースアプローチ**: 入力補正は純粋関数として実装し、クラスベースの複雑性を避ける。各補正機能は独立した関数として実装され、設定オブジェクトによって動作を制御する。
+
+**置換可能性**: 補正機能は中間処理層として動作し、補正なしでも完全に動作する。任意の補正機能を追加・削除・置換できる柔軟な設計とする。
+
+**リアルタイム性の保証**: 60fps 維持を最優先とし、品質とのバランスを動的に調整する仕組みを提供する。
+
+### 基本インターフェース設計
+
+```typescript
+/**
+ * 入力補正関数の基本型
+ *
+ * @param currentPoint 現在の入力点
+ * @param strokeHistory ストローク履歴（時系列順）
+ * @param config 補正設定（型は各関数で定義）
+ * @returns 補正後の点配列（通常は1点、場合により複数点や0点）
+ */
+type InputCorrectionFunction = (
+  currentPoint: StrokePoint,
+  strokeHistory: StrokePoint[],
+  config: unknown
+) => StrokePoint[];
+
+/**
+ * 統合補正設定
+ */
+interface InputCorrectionConfig {
+  pressureCorrection: PressureCorrectionConfig;
+  smoothing: SmoothingConfig;
+  // 将来的な拡張用
+  [key: string]: unknown;
+}
+```
+
+### 実装要件
+
+#### 1. 筆圧補正機能
+
+**目的**: デバイス固有の筆圧特性を正規化し、一貫した筆圧応答を提供
+
+**要求事項**:
+
+- デバイス別キャリブレーション対応（Apple Pencil、Wacom 等）
+- 筆圧値の時系列スムージング
+- 筆圧非対応デバイスでの適切なフォールバック
+- 0.0-1.0 範囲での正規化保証
+
+**設定項目**:
+
+```typescript
+interface PressureCorrectionConfig {
+  enabled: boolean;
+  deviceCalibration: Record<string, number>;
+  smoothingWindow: number; // 履歴点数
+}
+```
+
+#### 2. 座標スムージング機能
+
+**目的**: 入力座標のジッターを除去し、自然な描画線を生成
+
+**要求事項**:
+
+- リアルタイムモード: 最小遅延（<16ms）での線形スムージング
+- 品質モード: Catmull-Rom spline による高品質スムージング
+- 描画速度に応じた適応制御
+- 角度やエッジの保持
+
+**設定項目**:
+
+```typescript
+interface SmoothingConfig {
+  enabled: boolean;
+  strength: number; // 0.0-1.0
+  method: "linear" | "catmull-rom";
+  realtimeMode: boolean;
+  minPoints: number; // 処理開始に必要な最小点数
+}
+```
+
+### 統合パイプライン設計
+
+```typescript
+/**
+ * メイン補正関数
+ * 複数の補正機能を順次適用
+ */
+function applyInputCorrection(
+  currentPoint: StrokePoint,
+  strokeHistory: StrokePoint[],
+  config: InputCorrectionConfig
+): StrokePoint[];
+```
+
+**処理順序**:
+
+1. 筆圧補正 → 2. 座標スムージング → 3. 将来の拡張機能
+
+**パフォーマンス要件**:
+
+- 単一点処理時間: <1ms（60fps 維持のため）
+- メモリ使用量: 履歴点管理の最適化
+- 遅延最小化: リアルタイムモードでの即座な出力
+
+### InputProcessor 統合仕様
+
+既存の `InputProcessor.processInputEvent` 関数を拡張し、基本処理後に補正パイプラインを適用する。
+
+```typescript
+// 統合例（実装詳細は実装者に委ねる）
+function processInputEventWithCorrection(
+  event: NormalizedInputEvent,
+  config: ExtendedInputProcessorConfig,
+  strokeHistory: StrokePoint[]
+): NormalizedInputEvent[];
+```
+
+### 実装ガイドライン
+
+1. **純粋関数の徹底**: 全ての補正関数は副作用なしで実装
+2. **設定駆動**: ハードコードを避け、設定オブジェクトで制御
+3. **エラーハンドリング**: 不正な入力に対する適切な処理
+4. **テスタビリティ**: 各関数の単体テストを容易にする設計
+5. **拡張性**: 新しい補正機能の追加を考慮した設計
+
+### 品質保証要件
+
+- **数学的正確性**: スムージングアルゴリズムの実装精度
+- **デバイス互換性**: 主要な筆圧対応デバイスでの動作確認
+- **性能基準**: 連続描画時の 60fps 維持
+- **視覚品質**: スムージング適用前後の描画品質比較
+
 ## 段階的達成条件（Definition of Done）
 
 各実装ステップには明確な達成条件を設定し、次のステップに進む前に必ず確認する：
