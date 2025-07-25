@@ -3,8 +3,9 @@
  * コアステートとUIステートを明確に分離
  */
 
-import type { StrokeData } from './core';
+import type { StrokeData, StrokePoint } from './core';
 import type { ViewTransformState } from './coordinates';
+import type { NormalizedInputEvent } from '../input/InputEventHandler';
 
 // =============================================================================
 // CORE STATE - アプリケーションの本質的な状態
@@ -25,6 +26,10 @@ export interface DrawingEngineState {
   brushSize: number;
   /** ブラシの不透明度（0-1） */
   opacity: number;
+  /** 現在描画中かどうか */
+  isDrawing: boolean;
+  /** 現在描画中のストローク */
+  currentStroke: StrokePoint[];
 }
 
 /**
@@ -80,6 +85,30 @@ export interface PerformanceState {
 }
 
 /**
+ * アプリケーション設定の状態
+ */
+export interface AppConfigState {
+  /** Canvas要素のID */
+  canvasId: string;
+  /** Canvas表示サイズ */
+  displaySize: { width: number; height: number };
+  /** デバッグモードを有効にするか */
+  enableDebug: boolean;
+}
+
+/**
+ * 入力処理の状態
+ */
+export interface InputProcessorState {
+  /** 最後に処理されたイベント */
+  lastEvent?: NormalizedInputEvent;
+  /** 処理されたイベントの総数 */
+  eventCount: number;
+  /** 入力処理開始時刻 */
+  sessionStartTime?: number;
+}
+
+/**
  * コアアプリケーションステート
  * UIに依存しない、アプリケーションの本質的な状態
  */
@@ -89,6 +118,8 @@ export interface CoreState {
   view: ViewState;
   history: DrawingHistoryState;
   performance: PerformanceState;
+  appConfig: AppConfigState;
+  inputProcessor: InputProcessorState;
 }
 
 // =============================================================================
@@ -167,6 +198,11 @@ export interface DrawingEngineActions {
   setBrushSize: (size: number) => void;
   setOpacity: (opacity: number) => void;
   cleanup: () => void;
+  // 描画セッション管理
+  startDrawing: (point: StrokePoint) => void;
+  continueDrawing: (point: StrokePoint) => void;
+  endDrawing: (point: StrokePoint) => void;
+  cancelDrawing: () => void;
 }
 
 /**
@@ -221,6 +257,26 @@ export interface PerformanceActions {
 }
 
 /**
+ * アプリケーション設定関連のアクション
+ */
+export interface AppConfigActions {
+  setCanvasId: (canvasId: string) => void;
+  setDisplaySize: (size: { width: number; height: number }) => void;
+  setDebugMode: (enabled: boolean) => void;
+  updateConfig: (config: Partial<AppConfigState>) => void;
+}
+
+/**
+ * 入力処理関連のアクション
+ */
+export interface InputProcessorActions {
+  updateLastEvent: (event: NormalizedInputEvent) => void;
+  incrementEventCount: () => void;
+  resetInputProcessor: () => void;
+  setSessionStartTime: (timestamp: number) => void;
+}
+
+/**
  * 全アクションの統合
  */
 export interface AppActions {
@@ -230,4 +286,6 @@ export interface AppActions {
   history: HistoryActions;
   ui: UIActions;
   performance: PerformanceActions;
+  appConfig: AppConfigActions;
+  inputProcessor: InputProcessorActions;
 }

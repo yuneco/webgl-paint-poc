@@ -3,48 +3,36 @@
  * マウス、タッチ、ペンの入力を統一的に処理
  */
 
-import { CoordinateTransform } from './CoordinateTransform';
+import {
+  getTransformMatricesDebugInfo,
+  createCanvasDisplayInfo,
+} from './coordinateTransformFunctions';
+import {
+  type InputEventCallback,
+  type ActivePointerInfo,
+  createNormalizedEventFromPointer,
+  createNormalizedEventFromMouse,
+  isPointerEventsSupported,
+  preventDefault,
+  isPointerActive,
+  createActivePointerInfo,
+} from './inputNormalizationUtils';
+
+// Export types from inputNormalizationUtils for backward compatibility
+export type { NormalizedInputEvent, InputEventCallback, ActivePointerInfo } from './inputNormalizationUtils';
 import type {
-  PointerCoordinates,
-  CanvasCoordinates,
   ViewTransformState,
 } from '../types/coordinates';
-
-/**
- * 正規化された入力イベントデータ
- */
-export interface NormalizedInputEvent {
-  /** Canvas座標系での位置 */
-  position: CanvasCoordinates;
-  /** 筆圧 (0.0 - 1.0) */
-  pressure: number;
-  /** タイムスタンプ */
-  timestamp: number;
-  /** イベントタイプ */
-  type: 'start' | 'move' | 'end';
-  /** 入力デバイスタイプ */
-  deviceType: 'mouse' | 'pen' | 'touch';
-  /** ボタン状態 (マウス・ペンのみ) */
-  buttons?: number;
-  /** Tilt情報 (ペンのみ) */
-  tiltX?: number;
-  tiltY?: number;
-}
-
-/**
- * 入力イベントハンドラーのコールバック
- */
-export type InputEventCallback = (event: NormalizedInputEvent) => void;
 
 /**
  * Pointer Events APIを使用した入力イベント処理
  */
 export class InputEventHandler {
   private canvasElement: HTMLCanvasElement;
-  private coordinateTransform: CoordinateTransform;
+  private viewTransform: ViewTransformState;
   private eventCallback?: InputEventCallback;
   private isCapturing: boolean = false;
-  private activePointers: Map<number, { startTime: number; startPosition: CanvasCoordinates }> = new Map();
+  private activePointers: Map<number, ActivePointerInfo> = new Map();
 
   constructor(
     canvasElement: HTMLCanvasElement,
@@ -55,7 +43,7 @@ export class InputEventHandler {
     }
   ) {
     this.canvasElement = canvasElement;
-    this.coordinateTransform = new CoordinateTransform(canvasElement, viewTransform);
+    this.viewTransform = viewTransform;
     
     this.setupEventListeners();
   }
@@ -72,7 +60,7 @@ export class InputEventHandler {
    * ビュー変換を更新
    */
   updateViewTransform(viewTransform: ViewTransformState): void {
-    this.coordinateTransform.updateViewTransform(viewTransform);
+    this.viewTransform = viewTransform;
   }
 
   /**
@@ -88,7 +76,7 @@ export class InputEventHandler {
    */
   private setupEventListeners(): void {
     // Pointer Events API のサポート確認
-    if (!('PointerEvent' in window)) {
+    if (!isPointerEventsSupported()) {
       console.warn('Pointer Events API is not supported, falling back to mouse events');
       this.setupMouseEvents();
       return;
@@ -101,12 +89,12 @@ export class InputEventHandler {
     this.canvasElement.addEventListener('pointercancel', this.handlePointerCancel.bind(this));
     
     // ブラウザのデフォルト動作を無効化
-    this.canvasElement.addEventListener('touchstart', this.preventDefault);
-    this.canvasElement.addEventListener('touchmove', this.preventDefault);
-    this.canvasElement.addEventListener('touchend', this.preventDefault);
+    this.canvasElement.addEventListener('touchstart', preventDefault);
+    this.canvasElement.addEventListener('touchmove', preventDefault);
+    this.canvasElement.addEventListener('touchend', preventDefault);
     
     // コンテキストメニューを無効化 (右クリック対応)
-    this.canvasElement.addEventListener('contextmenu', this.preventDefault);
+    this.canvasElement.addEventListener('contextmenu', preventDefault);
   }
 
   /**
@@ -116,7 +104,7 @@ export class InputEventHandler {
     this.canvasElement.addEventListener('mousedown', this.handleMouseDown.bind(this));
     this.canvasElement.addEventListener('mousemove', this.handleMouseMove.bind(this));
     this.canvasElement.addEventListener('mouseup', this.handleMouseUp.bind(this));
-    this.canvasElement.addEventListener('contextmenu', this.preventDefault);
+    this.canvasElement.addEventListener('contextmenu', preventDefault);
   }
 
   /**
@@ -130,9 +118,9 @@ export class InputEventHandler {
     this.canvasElement.removeEventListener('pointercancel', this.handlePointerCancel.bind(this));
     
     // Touch Events
-    this.canvasElement.removeEventListener('touchstart', this.preventDefault);
-    this.canvasElement.removeEventListener('touchmove', this.preventDefault);
-    this.canvasElement.removeEventListener('touchend', this.preventDefault);
+    this.canvasElement.removeEventListener('touchstart', preventDefault);
+    this.canvasElement.removeEventListener('touchmove', preventDefault);
+    this.canvasElement.removeEventListener('touchend', preventDefault);
     
     // Mouse Events (fallback)
     this.canvasElement.removeEventListener('mousedown', this.handleMouseDown.bind(this));
@@ -140,7 +128,7 @@ export class InputEventHandler {
     this.canvasElement.removeEventListener('mouseup', this.handleMouseUp.bind(this));
     
     // コンテキストメニュー
-    this.canvasElement.removeEventListener('contextmenu', this.preventDefault);
+    this.canvasElement.removeEventListener('contextmenu', preventDefault);
   }
 
   /**
@@ -152,35 +140,16 @@ export class InputEventHandler {
     // ポインターをキャプチャ
     this.canvasElement.setPointerCapture(event.pointerId);
     
-    const pointerCoords: PointerCoordinates = {
-      offsetX: event.offsetX,
-      offsetY: event.offsetY,
-    };
-    
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
+    // 正規化されたイベントを作成
+    const normalizedEvent = createNormalizedEventFromPointer(
+      event,
+      'start',
+      this.canvasElement,
+      this.viewTransform
+    );
     
     // アクティブポインターを記録
-    this.activePointers.set(event.pointerId, {
-      startTime: performance.now(),
-      startPosition: canvasCoords,
-    });
-    
-    const normalizedEvent: NormalizedInputEvent = {
-      position: canvasCoords,
-      pressure: this.normalizePressure(event.pressure),
-      timestamp: performance.now(),
-      type: 'start',
-      deviceType: this.getDeviceType(event.pointerType),
-      buttons: event.buttons,
-    };
-    
-    // Tilt情報は有効な値の場合のみ追加
-    if (event.tiltX !== undefined && event.tiltX !== 0) {
-      normalizedEvent.tiltX = event.tiltX;
-    }
-    if (event.tiltY !== undefined && event.tiltY !== 0) {
-      normalizedEvent.tiltY = event.tiltY;
-    }
+    this.activePointers.set(event.pointerId, createActivePointerInfo(normalizedEvent.position));
     
     this.isCapturing = true;
     this.eventCallback?.(normalizedEvent);
@@ -190,35 +159,19 @@ export class InputEventHandler {
    * Pointer Move イベントハンドラー
    */
   private handlePointerMove(event: PointerEvent): void {
-    if (!this.activePointers.has(event.pointerId)) {
+    if (!isPointerActive(event.pointerId, this.activePointers)) {
       return;
     }
     
     event.preventDefault();
     
-    const pointerCoords: PointerCoordinates = {
-      offsetX: event.offsetX,
-      offsetY: event.offsetY,
-    };
-    
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
-    
-    const normalizedEvent: NormalizedInputEvent = {
-      position: canvasCoords,
-      pressure: this.normalizePressure(event.pressure),
-      timestamp: performance.now(),
-      type: 'move',
-      deviceType: this.getDeviceType(event.pointerType),
-      buttons: event.buttons,
-    };
-    
-    // Tilt情報は有効な値の場合のみ追加
-    if (event.tiltX !== undefined && event.tiltX !== 0) {
-      normalizedEvent.tiltX = event.tiltX;
-    }
-    if (event.tiltY !== undefined && event.tiltY !== 0) {
-      normalizedEvent.tiltY = event.tiltY;
-    }
+    // 正規化されたイベントを作成
+    const normalizedEvent = createNormalizedEventFromPointer(
+      event,
+      'move',
+      this.canvasElement,
+      this.viewTransform
+    );
     
     this.eventCallback?.(normalizedEvent);
   }
@@ -227,7 +180,7 @@ export class InputEventHandler {
    * Pointer Up イベントハンドラー
    */
   private handlePointerUp(event: PointerEvent): void {
-    if (!this.activePointers.has(event.pointerId)) {
+    if (!isPointerActive(event.pointerId, this.activePointers)) {
       return;
     }
     
@@ -236,29 +189,13 @@ export class InputEventHandler {
     // ポインターキャプチャを解放
     this.canvasElement.releasePointerCapture(event.pointerId);
     
-    const pointerCoords: PointerCoordinates = {
-      offsetX: event.offsetX,
-      offsetY: event.offsetY,
-    };
-    
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
-    
-    const normalizedEvent: NormalizedInputEvent = {
-      position: canvasCoords,
-      pressure: this.normalizePressure(event.pressure),
-      timestamp: performance.now(),
-      type: 'end',
-      deviceType: this.getDeviceType(event.pointerType),
-      buttons: event.buttons,
-    };
-    
-    // Tilt情報は有効な値の場合のみ追加
-    if (event.tiltX !== undefined && event.tiltX !== 0) {
-      normalizedEvent.tiltX = event.tiltX;
-    }
-    if (event.tiltY !== undefined && event.tiltY !== 0) {
-      normalizedEvent.tiltY = event.tiltY;
-    }
+    // 正規化されたイベントを作成
+    const normalizedEvent = createNormalizedEventFromPointer(
+      event,
+      'end',
+      this.canvasElement,
+      this.viewTransform
+    );
     
     this.activePointers.delete(event.pointerId);
     this.isCapturing = this.activePointers.size > 0;
@@ -270,7 +207,7 @@ export class InputEventHandler {
    * Pointer Cancel イベントハンドラー
    */
   private handlePointerCancel(event: PointerEvent): void {
-    if (!this.activePointers.has(event.pointerId)) {
+    if (!isPointerActive(event.pointerId, this.activePointers)) {
       return;
     }
     
@@ -285,21 +222,13 @@ export class InputEventHandler {
   private handleMouseDown(event: MouseEvent): void {
     event.preventDefault();
     
-    const pointerCoords: PointerCoordinates = {
-      offsetX: event.offsetX,
-      offsetY: event.offsetY,
-    };
-    
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
-    
-    const normalizedEvent: NormalizedInputEvent = {
-      position: canvasCoords,
-      pressure: event.buttons > 0 ? 1.0 : 0.0, // マウスの場合は押下状態で1.0
-      timestamp: performance.now(),
-      type: 'start',
-      deviceType: 'mouse',
-      buttons: event.buttons,
-    };
+    // 正規化されたイベントを作成
+    const normalizedEvent = createNormalizedEventFromMouse(
+      event,
+      'start',
+      this.canvasElement,
+      this.viewTransform
+    );
     
     this.isCapturing = true;
     this.eventCallback?.(normalizedEvent);
@@ -315,21 +244,13 @@ export class InputEventHandler {
     
     event.preventDefault();
     
-    const pointerCoords: PointerCoordinates = {
-      offsetX: event.offsetX,
-      offsetY: event.offsetY,
-    };
-    
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
-    
-    const normalizedEvent: NormalizedInputEvent = {
-      position: canvasCoords,
-      pressure: event.buttons > 0 ? 1.0 : 0.0,
-      timestamp: performance.now(),
-      type: 'move',
-      deviceType: 'mouse',
-      buttons: event.buttons,
-    };
+    // 正規化されたイベントを作成
+    const normalizedEvent = createNormalizedEventFromMouse(
+      event,
+      'move',
+      this.canvasElement,
+      this.viewTransform
+    );
     
     this.eventCallback?.(normalizedEvent);
   }
@@ -344,61 +265,18 @@ export class InputEventHandler {
     
     event.preventDefault();
     
-    const pointerCoords: PointerCoordinates = {
-      offsetX: event.offsetX,
-      offsetY: event.offsetY,
-    };
-    
-    const canvasCoords = this.coordinateTransform.pointerToCanvas(pointerCoords);
-    
-    const normalizedEvent: NormalizedInputEvent = {
-      position: canvasCoords,
-      pressure: 0.0, // マウスアップ時は筆圧0
-      timestamp: performance.now(),
-      type: 'end',
-      deviceType: 'mouse',
-      buttons: event.buttons,
-    };
+    // 正規化されたイベントを作成
+    const normalizedEvent = createNormalizedEventFromMouse(
+      event,
+      'end',
+      this.canvasElement,
+      this.viewTransform
+    );
     
     this.isCapturing = false;
     this.eventCallback?.(normalizedEvent);
   }
 
-  /**
-   * デフォルトイベント阻止
-   */
-  private preventDefault(event: Event): void {
-    event.preventDefault();
-  }
-
-  /**
-   * 筆圧値を正規化 (0.0 - 1.0)
-   */
-  private normalizePressure(pressure?: number): number {
-    if (pressure === undefined) {
-      return 0.5; // デフォルト筆圧
-    }
-    
-    // 筆圧値は通常0.0-1.0の範囲だが、デバイスによって異なる場合がある
-    // 筆圧非対応デバイスで0.0が来ても最小値0.3を保証
-    const normalizedPressure = Math.max(0.0, Math.min(1.0, pressure));
-    return normalizedPressure === 0.0 ? 0.5 : normalizedPressure;
-  }
-
-  /**
-   * デバイスタイプを正規化
-   */
-  private getDeviceType(pointerType: string): 'mouse' | 'pen' | 'touch' {
-    switch (pointerType) {
-      case 'pen':
-        return 'pen';
-      case 'touch':
-        return 'touch';
-      case 'mouse':
-      default:
-        return 'mouse';
-    }
-  }
 
   /**
    * 現在キャプチャ中かどうかを取得
@@ -415,9 +293,10 @@ export class InputEventHandler {
   }
 
   /**
-   * 座標変換インスタンスを取得（デバッグ用）
+   * 座標変換のデバッグ情報を取得（デバッグ用）
    */
-  public getCoordinateTransform(): CoordinateTransform {
-    return this.coordinateTransform;
+  public getCoordinateTransformDebugInfo() {
+    const canvasDisplay = createCanvasDisplayInfo(this.canvasElement);
+    return getTransformMatricesDebugInfo(canvasDisplay, this.viewTransform);
   }
 }

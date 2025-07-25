@@ -6,6 +6,7 @@
 import { InputEventHandler, type InputEventCallback, type NormalizedInputEvent } from './InputEventHandler';
 import { InputThrottler, type ThrottleConfig, DEFAULT_THROTTLE_CONFIG } from './InputThrottler';
 import type { ViewTransformState } from '../types/coordinates';
+import { coreStore } from '../store/coreStore';
 
 /**
  * 入力処理設定
@@ -36,7 +37,6 @@ export class InputProcessor {
   private throttler: InputThrottler;
   private config: InputProcessorConfig;
   private finalCallback?: InputEventCallback;
-  private lastEvent?: NormalizedInputEvent;
 
   constructor(
     canvasElement: HTMLCanvasElement,
@@ -111,8 +111,8 @@ export class InputProcessor {
       },
       throttler: this.throttler.getStats(),
       processor: {
-        lastEventTime: this.lastEvent?.timestamp,
-        totalEventsProcessed: this.eventCount,
+        lastEventTime: coreStore.getState().inputProcessor.lastEvent?.timestamp,
+        totalEventsProcessed: coreStore.getState().inputProcessor.eventCount,
       },
     };
   }
@@ -123,88 +123,40 @@ export class InputProcessor {
   destroy(): void {
     this.inputHandler.destroy();
     this.throttler.destroy();
-    this.lastEvent = undefined;
+    coreStore.getState().resetInputProcessor();
     this.finalCallback = undefined;
   }
 
-  private eventCount: number = 0;
 
   /**
    * 生の入力イベントを処理
    */
   private handleRawInputEvent(event: NormalizedInputEvent): void {
-    this.eventCount++;
+    // イベントカウンターを更新
+    coreStore.getState().incrementEventCount();
 
     // 間引き処理を適用
     const throttledEvents = this.throttler.processEvent(event);
 
     // 各間引き済みイベントを処理
     for (const throttledEvent of throttledEvents) {
-      const processedEvent = this.processEvent(throttledEvent);
+      const processedEvent = processInputEvent(throttledEvent, this.config);
       if (processedEvent) {
-        this.lastEvent = processedEvent;
+        // ストアの状態を更新
+        coreStore.getState().updateLastEvent(processedEvent);
         this.finalCallback?.(processedEvent);
       }
     }
   }
 
-  /**
-   * 個別イベントの追加処理
-   */
-  private processEvent(event: NormalizedInputEvent): NormalizedInputEvent | null {
-    // 重複除去フィルタ
-    if (this.config.enableDuplicateFiltering && this.isDuplicateEvent(event)) {
-      return null;
-    }
 
-    // 筆圧変化フィルタ（moveイベントのみ）
-    if (event.type === 'move' && this.isMinimalPressureChange(event)) {
-      return null;
-    }
 
-    return event;
-  }
 
   /**
-   * 重複イベントチェック
+   * デバッグ用: 座標変換のデバッグ情報を取得
    */
-  private isDuplicateEvent(event: NormalizedInputEvent): boolean {
-    if (!this.lastEvent) {
-      return false;
-    }
-
-    // 同じタイプで同じ位置・筆圧のイベントは重複とみなす
-    return (
-      this.lastEvent.type === event.type &&
-      this.lastEvent.position.canvasX === event.position.canvasX &&
-      this.lastEvent.position.canvasY === event.position.canvasY &&
-      Math.abs(this.lastEvent.pressure - event.pressure) < this.config.minPressureChange
-    );
-  }
-
-  /**
-   * 最小筆圧変化チェック
-   */
-  private isMinimalPressureChange(event: NormalizedInputEvent): boolean {
-    if (!this.lastEvent || event.type !== 'move') {
-      return false;
-    }
-
-    // 筆圧非対応デバイス（pressure = 0.5）の場合はフィルタリングしない
-    if (event.pressure === 0.5 && this.lastEvent.pressure === 0.5) {
-      return false;
-    }
-
-    // 位置は変わったが筆圧変化が少ない場合
-    const pressureChange = Math.abs(this.lastEvent.pressure - event.pressure);
-    return pressureChange < this.config.minPressureChange;
-  }
-
-  /**
-   * デバッグ用: 座標変換インスタンスを取得
-   */
-  public getCoordinateTransform() {
-    return this.inputHandler.getCoordinateTransform();
+  public getCoordinateTransformDebugInfo() {
+    return this.inputHandler.getCoordinateTransformDebugInfo();
   }
 
   /**
@@ -218,7 +170,88 @@ export class InputProcessor {
     return {
       config: this.getConfig(),
       stats: this.getStats(),
-      lastEvent: this.lastEvent,
+      lastEvent: coreStore.getState().inputProcessor.lastEvent,
     };
   }
+}
+
+// =============================================================================
+// PURE FUNCTIONS FOR INPUT PROCESSING
+// InputProcessorクラスから抽出された純粋関数
+// =============================================================================
+
+/**
+ * 個別イベントの追加処理（純粋関数）
+ * @param event 処理対象のイベント
+ * @param config 入力処理設定
+ * @returns 処理されたイベント、またはフィルタされた場合はnull
+ */
+export function processInputEvent(
+  event: NormalizedInputEvent,
+  config: InputProcessorConfig
+): NormalizedInputEvent | null {
+  const lastEvent = coreStore.getState().inputProcessor.lastEvent;
+  
+  // 重複除去フィルタ
+  if (config.enableDuplicateFiltering && isDuplicateInputEvent(event, lastEvent, config.minPressureChange)) {
+    return null;
+  }
+
+  // 筆圧変化フィルタ（moveイベントのみ）
+  if (event.type === 'move' && isMinimalPressureChangeEvent(event, lastEvent, config.minPressureChange)) {
+    return null;
+  }
+
+  return event;
+}
+
+/**
+ * 重複イベントチェック（純粋関数）
+ * @param event 現在のイベント
+ * @param lastEvent 前回のイベント
+ * @param minPressureChange 最小筆圧変化量
+ * @returns 重複している場合はtrue
+ */
+export function isDuplicateInputEvent(
+  event: NormalizedInputEvent,
+  lastEvent: NormalizedInputEvent | undefined,
+  minPressureChange: number
+): boolean {
+  if (!lastEvent) {
+    return false;
+  }
+
+  // 同じタイプで同じ位置・筆圧のイベントは重複とみなす
+  return (
+    lastEvent.type === event.type &&
+    lastEvent.position.canvasX === event.position.canvasX &&
+    lastEvent.position.canvasY === event.position.canvasY &&
+    Math.abs(lastEvent.pressure - event.pressure) < minPressureChange
+  );
+}
+
+/**
+ * 最小筆圧変化チェック（純粋関数）
+ * @param event 現在のイベント
+ * @param lastEvent 前回のイベント
+ * @param minPressureChange 最小筆圧変化量
+ * @returns 筆圧変化が最小値未満の場合はtrue
+ */
+export function isMinimalPressureChangeEvent(
+  event: NormalizedInputEvent,
+  lastEvent: NormalizedInputEvent | undefined,
+  minPressureChange: number
+): boolean {
+  if (!lastEvent || event.type !== 'move') {
+    return false;
+  }
+
+  // 筆圧非対応デバイス（pressure = 0.5）の場合はフィルタリングしない
+  if (event.pressure === 0.5 && lastEvent.pressure === 0.5) {
+    return false;
+  }
+
+  // 位置は変わったが筆圧変化が少ない場合
+  const pressureChange = Math.abs(lastEvent.pressure - event.pressure);
+  return pressureChange < minPressureChange;
 }

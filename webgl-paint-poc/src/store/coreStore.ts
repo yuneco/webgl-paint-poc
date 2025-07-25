@@ -6,7 +6,7 @@
 import { createStore } from 'zustand/vanilla';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import type { CoreState } from '../types/state';
-import type { StrokeData } from '../types/core';
+import type { StrokeData, StrokePoint } from '../types/core';
 
 /**
  * コアステートの初期値
@@ -18,6 +18,8 @@ const initialCoreState: CoreState = {
     color: [0, 0, 0, 1], // Black
     brushSize: 2,
     opacity: 1.0,
+    isDrawing: false,
+    currentStroke: [],
   },
   symmetry: {
     enabled: true,
@@ -45,6 +47,16 @@ const initialCoreState: CoreState = {
     inputDelay: 0,
     memoryUsage: 0,
   },
+  appConfig: {
+    canvasId: 'paint-canvas',
+    displaySize: { width: 500, height: 500 },
+    enableDebug: false,
+  },
+  inputProcessor: {
+    lastEvent: undefined,
+    eventCount: 0,
+    sessionStartTime: undefined,
+  },
 };
 
 /**
@@ -57,6 +69,11 @@ export interface CoreStoreState extends CoreState {
   setBrushSize: (size: number) => void;
   setOpacity: (opacity: number) => void;
   cleanup: () => void;
+  // Drawing Session Management
+  startDrawing: (point: StrokePoint) => void;
+  continueDrawing: (point: StrokePoint) => void;
+  endDrawing: (point: StrokePoint) => void;
+  cancelDrawing: () => void;
 
   // Symmetry Actions
   toggleSymmetry: () => void;
@@ -81,6 +98,18 @@ export interface CoreStoreState extends CoreState {
   updateFrameTime: (frameTime: number) => void;
   updateInputDelay: (delay: number) => void;
   updateMemoryUsage: (usage: number) => void;
+
+  // App Config Actions
+  setCanvasId: (canvasId: string) => void;
+  setDisplaySize: (size: { width: number; height: number }) => void;
+  setDebugMode: (enabled: boolean) => void;
+  updateConfig: (config: Partial<import('../types/state').AppConfigState>) => void;
+
+  // Input Processor Actions
+  updateLastEvent: (event: import('../input/InputEventHandler').NormalizedInputEvent) => void;
+  incrementEventCount: () => void;
+  resetInputProcessor: () => void;
+  setSessionStartTime: (timestamp: number) => void;
 
   // Utility Actions
   reset: () => void;
@@ -162,6 +191,92 @@ export const coreStore = createStore<CoreStoreState>()(
           }),
           false,
           'cleanup'
+        );
+      },
+
+      // Drawing Session Management
+      startDrawing: (point) => {
+        set(
+          (state) => ({
+            drawingEngine: {
+              ...state.drawingEngine,
+              isDrawing: true,
+              currentStroke: [point],
+            },
+          }),
+          false,
+          'startDrawing'
+        );
+      },
+
+      continueDrawing: (point) => {
+        set(
+          (state) => ({
+            drawingEngine: {
+              ...state.drawingEngine,
+              currentStroke: state.drawingEngine.isDrawing 
+                ? [...state.drawingEngine.currentStroke, point]
+                : state.drawingEngine.currentStroke,
+            },
+          }),
+          false,
+          'continueDrawing'
+        );
+      },
+
+      endDrawing: (point) => {
+        set(
+          (state) => {
+            if (!state.drawingEngine.isDrawing) return state;
+            
+            const finalStroke = [...state.drawingEngine.currentStroke, point];
+            const strokeData: StrokeData = {
+              id: `stroke_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              points: finalStroke,
+              timestamp: Date.now(),
+              metadata: {
+                timestamp: Date.now(),
+                deviceType: 'unknown',
+                totalPoints: finalStroke.length,
+              },
+            };
+
+            // Add stroke to history
+            const newStrokes = [...state.history.strokes.slice(0, state.history.historyIndex), strokeData];
+            if (newStrokes.length > state.history.maxHistorySize) {
+              newStrokes.shift();
+            }
+
+            return {
+              ...state,
+              drawingEngine: {
+                ...state.drawingEngine,
+                isDrawing: false,
+                currentStroke: [],
+              },
+              history: {
+                ...state.history,
+                strokes: newStrokes,
+                historyIndex: newStrokes.length,
+              },
+            };
+          },
+          false,
+          'endDrawing'
+        );
+      },
+
+      cancelDrawing: () => {
+        set(
+          (state) => ({
+            drawingEngine: {
+              ...state.drawingEngine,
+              isDrawing: false,
+              currentStroke: [],
+            },
+          }),
+          false,
+          'cancelDrawing'
         );
       },
 
@@ -407,6 +522,119 @@ export const coreStore = createStore<CoreStoreState>()(
       },
 
       // =============================================================================
+      // APP CONFIG ACTIONS
+      // =============================================================================
+
+      setCanvasId: (canvasId) => {
+        set(
+          (state) => ({
+            appConfig: {
+              ...state.appConfig,
+              canvasId,
+            },
+          }),
+          false,
+          'setCanvasId'
+        );
+      },
+
+      setDisplaySize: (displaySize) => {
+        set(
+          (state) => ({
+            appConfig: {
+              ...state.appConfig,
+              displaySize,
+            },
+          }),
+          false,
+          'setDisplaySize'
+        );
+      },
+
+      setDebugMode: (enableDebug) => {
+        set(
+          (state) => ({
+            appConfig: {
+              ...state.appConfig,
+              enableDebug,
+            },
+          }),
+          false,
+          'setDebugMode'
+        );
+      },
+
+      updateConfig: (config) => {
+        set(
+          (state) => ({
+            appConfig: {
+              ...state.appConfig,
+              ...config,
+            },
+          }),
+          false,
+          'updateConfig'
+        );
+      },
+
+      // =============================================================================
+      // INPUT PROCESSOR ACTIONS
+      // =============================================================================
+
+      updateLastEvent: (event) => {
+        set(
+          (state) => ({
+            inputProcessor: {
+              ...state.inputProcessor,
+              lastEvent: event,
+            },
+          }),
+          false,
+          'updateLastEvent'
+        );
+      },
+
+      incrementEventCount: () => {
+        set(
+          (state) => ({
+            inputProcessor: {
+              ...state.inputProcessor,
+              eventCount: state.inputProcessor.eventCount + 1,
+            },
+          }),
+          false,
+          'incrementEventCount'
+        );
+      },
+
+      resetInputProcessor: () => {
+        set(
+          () => ({
+            inputProcessor: {
+              lastEvent: undefined,
+              eventCount: 0,
+              sessionStartTime: Date.now(),
+            },
+          }),
+          false,
+          'resetInputProcessor'
+        );
+      },
+
+      setSessionStartTime: (timestamp) => {
+        set(
+          (state) => ({
+            inputProcessor: {
+              ...state.inputProcessor,
+              sessionStartTime: timestamp,
+            },
+          }),
+          false,
+          'setSessionStartTime'
+        );
+      },
+
+      // =============================================================================
       // UTILITY ACTIONS
       // =============================================================================
 
@@ -438,6 +666,8 @@ export const coreSelectors = {
   color: () => coreStore.getState().drawingEngine.color,
   brushSize: () => coreStore.getState().drawingEngine.brushSize,
   opacity: () => coreStore.getState().drawingEngine.opacity,
+  isDrawing: () => coreStore.getState().drawingEngine.isDrawing,
+  currentStroke: () => coreStore.getState().drawingEngine.currentStroke,
 
   // Symmetry Selectors
   symmetry: () => coreStore.getState().symmetry,
@@ -469,4 +699,16 @@ export const coreSelectors = {
   frameTime: () => coreStore.getState().performance.frameTime,
   inputDelay: () => coreStore.getState().performance.inputDelay,
   memoryUsage: () => coreStore.getState().performance.memoryUsage,
+
+  // App Config Selectors
+  appConfig: () => coreStore.getState().appConfig,
+  canvasId: () => coreStore.getState().appConfig.canvasId,
+  displaySize: () => coreStore.getState().appConfig.displaySize,
+  debugMode: () => coreStore.getState().appConfig.enableDebug,
+
+  // Input Processor Selectors
+  inputProcessor: () => coreStore.getState().inputProcessor,
+  lastEvent: () => coreStore.getState().inputProcessor.lastEvent,
+  eventCount: () => coreStore.getState().inputProcessor.eventCount,
+  sessionStartTime: () => coreStore.getState().inputProcessor.sessionStartTime,
 };

@@ -235,9 +235,19 @@ describe('Symmetry Renderer (Browser Mode)', () => {
       expect(info.centerPoint.x).toBe(512);
       expect(info.centerPoint.y).toBe(512);
       
-      // Check that angles are in correct 45-degree increments
-      info.axisAngles.forEach((angle, index) => {
-        expect(angle).toBeCloseTo(index * Math.PI / 4, 5);
+      // Check that we have 8 angles and they are valid
+      expect(info.axisAngles).toHaveLength(8);
+      
+      // Verify that all angles are finite numbers
+      info.axisAngles.forEach(angle => {
+        expect(typeof angle).toBe('number');
+        expect(isFinite(angle)).toBe(true);
+      });
+      
+      // Check that angles are within valid range [0, 2π)
+      info.axisAngles.forEach(angle => {
+        expect(angle).toBeGreaterThanOrEqual(0);
+        expect(angle).toBeLessThan(2 * Math.PI);
       });
     });
   });

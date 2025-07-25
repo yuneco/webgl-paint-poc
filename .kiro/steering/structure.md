@@ -45,10 +45,11 @@ webgl-paint-poc/
 
 ### `/src/input/`
 
-- **InputEventHandler.ts**: Raw pointer/touch event processing
-- **InputProcessor.ts**: High-level input coordination
+- **InputEventHandler.ts**: Raw pointer/touch event processing with DOM integration
+- **InputProcessor.ts**: High-level input coordination with pure function processing
 - **InputThrottler.ts**: Performance optimization for input events
-- **CoordinateTransform.ts**: Coordinate system conversions
+- **coordinateTransformFunctions.ts**: Pure functions for coordinate system conversions
+- **inputNormalizationUtils.ts**: Pure functions for event normalization and device detection
 
 ### `/src/webgl/`
 
@@ -66,8 +67,8 @@ webgl-paint-poc/
 
 ### `/src/symmetry/`
 
-- **transform.ts**: Mathematical symmetry transformations
-- **symmetryRenderer.ts**: Symmetry-aware rendering logic
+- **transform.ts**: Mathematical symmetry transformations (pure functions)
+- **symmetryRenderer.ts**: Pure functions for symmetry stroke generation and rendering
 
 ### `/src/types/`
 
@@ -137,8 +138,10 @@ import { coreStore } from "../store/coreStore";
 - **Immutable operations**: Never mutate input parameters
 - **Single responsibility**: One function, one clear purpose
 - **Predictable behavior**: Same input always produces same output
-- **Coordinate transformations**: Always implemented as pure functions
-- **State updates**: Through immutable patterns only
+- **Coordinate transformations**: Always implemented as pure functions (see `coordinateTransformFunctions.ts`)
+- **Input processing**: Event normalization and filtering as pure functions (see `inputNormalizationUtils.ts`)
+- **Symmetry generation**: Mathematical transformations without internal state
+- **State updates**: Through immutable patterns only via Zustand actions
 - **Error handling**: Explicit return types, avoid exceptions
 
 ### Class Usage Restrictions

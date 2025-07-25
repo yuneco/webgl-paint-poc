@@ -442,8 +442,8 @@ describe('InputEventHandler', () => {
       inputHandler.updateViewTransform(viewTransform);
 
       // ビュー変換が適用された座標変換が動作することを確認
-      const transform = inputHandler.getCoordinateTransform();
-      expect(transform).toBeDefined();
+      const transformDebugInfo = inputHandler.getCoordinateTransformDebugInfo();
+      expect(transformDebugInfo).toBeDefined();
     });
   });
 

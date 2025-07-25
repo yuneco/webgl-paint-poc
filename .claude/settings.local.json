@@ -24,7 +24,10 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "mcp__playwright__browser_resize",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(tsc --noEmit)",
+      "Bash(npx vitest run:*)",
+      "Bash(gh pr view:*)"
     ],
     "deny": []
   }

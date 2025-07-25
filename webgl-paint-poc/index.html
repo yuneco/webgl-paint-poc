@@ -247,8 +247,8 @@
                 arcStroke, complexCurveStroke, spiralStroke, zigzagStroke } from './src/data/testStrokes.js';
         // Import symmetry renderer
         import { renderStrokeWithSymmetry, renderStrokesWithSymmetry } from './src/symmetry/symmetryRenderer.js';
-        // Import Paint App
-        import { PaintApp } from './src/app/PaintApp.js';
+        // Import Paint App Factory
+        import { PaintAppFactory } from './src/app/PaintAppFactory.js';
 
         let renderer;
         let paintApp;
@@ -339,7 +339,7 @@
                 setDrawingColor(renderer, 0.0, 0.0, 0.0, 1.0);
                 
                 // Initialize interactive paint app
-                paintApp = new PaintApp({
+                paintApp = PaintAppFactory.create({
                     canvasId: 'paint-canvas',
                     displaySize: { width: 500, height: 500 },
                     enableDebug: true
