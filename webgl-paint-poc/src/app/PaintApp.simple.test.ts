@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { PaintApp } from './PaintApp';
+import { PaintAppFactory } from './PaintAppFactory';
 
 describe('PaintApp Simple Tests', () => {
   it('should export PaintApp class', () => {
@@ -14,7 +15,7 @@ describe('PaintApp Simple Tests', () => {
 
   it('should throw error for non-existent canvas', () => {
     expect(() => {
-      new PaintApp({
+      PaintAppFactory.create({
         canvasId: 'non-existent-canvas',
         displaySize: { width: 500, height: 500 },
         enableDebug: false,

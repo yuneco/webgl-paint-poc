@@ -5,7 +5,9 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PaintApp } from './PaintApp';
+import { PaintAppFactory } from './PaintAppFactory';
 import { coreStore } from '../store/coreStore';
+import { drawingStore } from '../store/drawingStore';
 
 describe('PaintApp', () => {
   let canvasElement: HTMLCanvasElement;
@@ -37,15 +39,21 @@ describe('PaintApp', () => {
     vi.restoreAllMocks();
     
     // ストアをリセット
-    const state = coreStore.getState();
-    if (state.clearHistory) {
-      state.clearHistory();
+    const coreState = coreStore.getState();
+    if (coreState.clearHistory) {
+      coreState.clearHistory();
+    }
+    
+    // 新しいストアもリセット
+    const drawingState = drawingStore.getState();
+    if (drawingState.clearHistory) {
+      drawingState.clearHistory();
     }
   });
 
   describe('Initialization', () => {
     it('should initialize with valid configuration', () => {
-      paintApp = new PaintApp({
+      paintApp = PaintAppFactory.create({
         canvasId: 'test-paint-canvas',
         displaySize: { width: 500, height: 500 },
         enableDebug: false,
@@ -60,7 +68,7 @@ describe('PaintApp', () => {
 
     it('should throw error for non-existent canvas', () => {
       expect(() => {
-        new PaintApp({
+        PaintAppFactory.create({
           canvasId: 'non-existent-canvas',
           displaySize: { width: 500, height: 500 },
           enableDebug: false,
@@ -69,7 +77,7 @@ describe('PaintApp', () => {
     });
 
     it('should setup canvas with correct styles', () => {
-      paintApp = new PaintApp({
+      paintApp = PaintAppFactory.create({
         canvasId: 'test-paint-canvas',
         displaySize: { width: 600, height: 400 },
         enableDebug: false,
@@ -83,7 +91,7 @@ describe('PaintApp', () => {
 
   describe('Canvas Operations', () => {
     beforeEach(() => {
-      paintApp = new PaintApp({
+      paintApp = PaintAppFactory.create({
         canvasId: 'test-paint-canvas',
         displaySize: { width: 500, height: 500 },
         enableDebug: false,
@@ -109,7 +117,7 @@ describe('PaintApp', () => {
       expect(coreStore.getState().history.strokes).toHaveLength(1);
 
       paintApp.clearCanvas();
-      expect(coreStore.getState().history.strokes).toHaveLength(0);
+      expect(drawingStore.getState().history.strokes).toHaveLength(0);
     });
 
     it('should update display size', () => {
@@ -122,7 +130,7 @@ describe('PaintApp', () => {
 
   describe('Symmetry Operations', () => {
     beforeEach(() => {
-      paintApp = new PaintApp({
+      paintApp = PaintAppFactory.create({
         canvasId: 'test-paint-canvas',
         displaySize: { width: 500, height: 500 },
         enableDebug: false,
@@ -130,14 +138,14 @@ describe('PaintApp', () => {
     });
 
     it('should update symmetry settings', () => {
-      const initialState = coreStore.getState().symmetry;
+      const initialState = drawingStore.getState().symmetry;
       expect(initialState.enabled).toBe(true); // デフォルト値
 
       paintApp.updateSymmetry(false);
-      expect(coreStore.getState().symmetry.enabled).toBe(false);
+      expect(drawingStore.getState().symmetry.enabled).toBe(false);
 
       paintApp.updateSymmetry(true, 16);
-      const updatedState = coreStore.getState().symmetry;
+      const updatedState = drawingStore.getState().symmetry;
       expect(updatedState.enabled).toBe(true);
       expect(updatedState.axisCount).toBe(8);
     });
@@ -145,7 +153,7 @@ describe('PaintApp', () => {
 
   describe('Input Event Processing', () => {
     beforeEach(() => {
-      paintApp = new PaintApp({
+      paintApp = PaintAppFactory.create({
         canvasId: 'test-paint-canvas',
         displaySize: { width: 500, height: 500 },
         enableDebug: false,
@@ -174,7 +182,7 @@ describe('PaintApp', () => {
 
     it('should process pointer move event during drawing', async () => {
       // デバッグモードで新しいPaintAppを作成
-      const debugPaintApp = new PaintApp({
+      const debugPaintApp = PaintAppFactory.create({
         canvasId: 'test-paint-canvas',
         displaySize: { width: 500, height: 500 },
         enableDebug: true,
@@ -243,13 +251,13 @@ describe('PaintApp', () => {
       expect(debugState.currentStrokePoints).toBe(0);
       
       // ストロークがストアに保存されていることを確認
-      expect(coreStore.getState().history.strokes).toHaveLength(1);
+      expect(drawingStore.getState().history.strokes).toHaveLength(1);
     });
   });
 
   describe('Debug Mode', () => {
     it('should setup debug info when enabled', () => {
-      paintApp = new PaintApp({
+      paintApp = PaintAppFactory.create({
         canvasId: 'test-paint-canvas',
         displaySize: { width: 500, height: 500 },
         enableDebug: true,
@@ -261,7 +269,7 @@ describe('PaintApp', () => {
     });
 
     it('should not setup debug info when disabled', () => {
-      paintApp = new PaintApp({
+      paintApp = PaintAppFactory.create({
         canvasId: 'test-paint-canvas',
         displaySize: { width: 500, height: 500 },
         enableDebug: false,
@@ -275,7 +283,7 @@ describe('PaintApp', () => {
 
   describe('Resource Management', () => {
     it('should clean up resources on destroy', () => {
-      paintApp = new PaintApp({
+      paintApp = PaintAppFactory.create({
         canvasId: 'test-paint-canvas',
         displaySize: { width: 500, height: 500 },
         enableDebug: true,
@@ -295,7 +303,7 @@ describe('PaintApp', () => {
 
   describe('State Integration', () => {
     beforeEach(() => {
-      paintApp = new PaintApp({
+      paintApp = PaintAppFactory.create({
         canvasId: 'test-paint-canvas',
         displaySize: { width: 500, height: 500 },
         enableDebug: false,
@@ -304,10 +312,11 @@ describe('PaintApp', () => {
 
     it('should integrate with core store', () => {
       const debugState = paintApp.getDebugState();
-      expect(debugState.coreState).toBeDefined();
-      expect(debugState.coreState.history).toBeDefined();
-      expect(debugState.coreState.symmetry).toBeDefined();
-      expect(debugState.coreState.view).toBeDefined();
+      expect(debugState.totalStrokes).toBeDefined();
+      expect(debugState.symmetry).toBeDefined();
+      expect(debugState.view).toBeDefined();
+      expect(debugState.performance).toBeDefined();
+      expect(debugState.config).toBeDefined();
     });
 
     it('should track input processor statistics', () => {

@@ -90,6 +90,7 @@ pnpm preview
 - **Immutable data**: No mutation of input parameters
 - **Single responsibility**: Each function has one clear purpose
 - **Predictable behavior**: Same input always produces same output
+- **Testability**: Pure functions enable easy unit testing without mocks
 
 ### State Management
 
@@ -98,6 +99,7 @@ pnpm preview
 - **Immutable updates**: Pure functions for state transitions
 - **Unidirectional data flow**: State → View → Actions → State
 - **Explicit state dependencies**: Functions receive state as parameters, not through class properties
+- **State isolation**: Drawing, input, view, and performance states are clearly separated
 
 ### Coordinate Systems
 
@@ -105,19 +107,29 @@ pnpm preview
 - **WebGL coordinates**: -1 to 1 normalized device coordinates
 - **Pointer coordinates**: DOM offset coordinates
 - **Transform matrices**: 3x3 matrices for all coordinate conversions
+- **Pure transformation functions**: All coordinate conversions implemented as stateless functions
 
 ### Class Usage Guidelines
 
 - **Avoid stateful classes**: Classes should not maintain application state
 - **Permitted class usage**:
-  - Mathematical utilities (Matrix3x3, Vector2D) - immutable operations only
+  - Mathematical utilities (Matrix3x3) - immutable operations only
   - Error types - simple data structures without behavior
   - Resource managers - WebGL contexts, GPU resources with explicit lifecycle
+  - DOM integration - Canvas management, event listener coordination
 - **Prohibited class usage**:
   - Application logic coordination (use functions + Zustand)
   - Input processing with internal state (use pure functions)
   - Coordinate transformation with cached state (use pure functions)
   - Configuration management (use Zustand stores)
+  - Symmetry rendering with internal config (use pure functions with explicit parameters)
+
+### Pure Function Implementation Patterns
+
+- **Input processing**: Event normalization and filtering as pure functions
+- **Coordinate transformation**: All transformations as stateless functions with explicit parameters
+- **Symmetry generation**: Mathematical transformations without internal configuration
+- **State updates**: Immutable state transitions through Zustand actions
 
 ### Error Handling
 
@@ -125,3 +137,12 @@ pnpm preview
 - **Shader compilation**: Detailed error logging and fallbacks
 - **Input validation**: Coordinate clamping and pressure normalization
 - **Functional error handling**: Return Result<T, E> types instead of throwing exceptions
+- **Coordinate transformation errors**: Explicit error types with context information
+
+### Implementation Success Metrics
+
+- **Zero stateful classes**: All application logic implemented as pure functions
+- **Centralized state**: All state managed through Zustand stores
+- **Test coverage**: 100% test success rate maintained during refactoring
+- **Performance**: No regression in 60fps target during continuous drawing
+- **Code reduction**: Significant reduction in lines of code through elimination of duplicate state management
