@@ -164,6 +164,27 @@ export interface DebugUIState {
 }
 
 /**
+ * 入力補正UI用の設定
+ * タスク6.6で追加された筆圧とスムージング設定
+ */
+export interface InputCorrectionUIState {
+  /** 筆圧補正を有効にするか */
+  pressureCorrectionEnabled: boolean;
+  /** 座標スムージングを有効にするか */
+  smoothingEnabled: boolean;
+  /** スムージング強度 (0.0-1.0) */
+  smoothingStrength: number;
+  /** スムージング方法 */
+  smoothingMethod: 'linear' | 'catmull-rom';
+  /** リアルタイムモード (true=速度優先, false=品質優先) */
+  realtimeMode: boolean;
+  /** ペンの太さ (デモ用) */
+  penThickness: number;
+  /** 補正の品質監視を表示するか */
+  showQualityMetrics: boolean;
+}
+
+/**
  * UIアプリケーションステート
  * 頻繁に変更される可能性があるUI関連の状態
  */
@@ -171,6 +192,7 @@ export interface UIState {
   demo: DemoUIState;
   performance: PerformanceUIState;
   debug: DebugUIState;
+  inputCorrection: InputCorrectionUIState;
 }
 
 // =============================================================================
@@ -244,6 +266,19 @@ export interface UIActions {
   toggleMetrics: () => void;
   toggleDebugInfo: () => void;
   toggleSymmetryAxes: () => void;
+}
+
+/**
+ * 入力補正UI関連のアクション
+ */
+export interface InputCorrectionUIActions {
+  setPressureCorrectionEnabled: (enabled: boolean) => void;
+  setSmoothingEnabled: (enabled: boolean) => void;
+  setSmoothingStrength: (strength: number) => void;
+  setSmoothingMethod: (method: 'linear' | 'catmull-rom') => void;
+  setRealtimeMode: (enabled: boolean) => void;
+  setPenThickness: (thickness: number) => void;
+  toggleQualityMetrics: () => void;
 }
 
 /**

@@ -9,6 +9,7 @@ export interface ShaderProgram {
   uniforms: {
     resolution: WebGLUniformLocation | null;
     color: WebGLUniformLocation | null;
+    brushSize: WebGLUniformLocation | null;
   };
 }
 
@@ -42,6 +43,7 @@ export const basicVertexShaderSource = `
   attribute float a_pressure;
   
   uniform vec2 u_resolution;
+  uniform float u_brushSize;
   
   varying float v_pressure;
   
@@ -57,8 +59,9 @@ export const basicVertexShaderSource = `
     // Pass pressure to fragment shader
     v_pressure = a_pressure;
     
-    // Use pressure to control point size (for GL_POINTS rendering)
-    gl_PointSize = a_pressure * 10.0 + 2.0;
+    // Use pressure and brush size to control point size (for GL_POINTS rendering)
+    // Enhanced visibility: stronger brush size effect with minimum size
+    gl_PointSize = a_pressure * u_brushSize * 3.0 + 8.0;
   }
 `;
 
@@ -70,9 +73,15 @@ export const basicFragmentShaderSource = `
   varying float v_pressure;
   
   void main() {
-    // Simple solid color with pressure-based alpha
+    // Enhanced visibility with stronger alpha and saturated color
     vec4 color = u_color;
-    color.a *= v_pressure;
+    
+    // Boost the pressure effect for better visibility
+    float enhancedPressure = clamp(v_pressure * 1.5, 0.3, 1.0);
+    color.a *= enhancedPressure;
+    
+    // Make colors more saturated for line visibility
+    color.rgb = mix(color.rgb, vec3(0.0), 0.2); // Slightly darker for contrast
     
     gl_FragColor = color;
   }
@@ -102,7 +111,7 @@ export function compileShader(
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     const error = gl.getShaderInfoLog(shader) || 'Unknown compilation error';
     gl.deleteShader(shader);
-    
+
     throw new ShaderCompilationError(
       `Shader compilation failed: ${error}`,
       type === gl.VERTEX_SHADER ? 'vertex' : 'fragment',
@@ -137,7 +146,7 @@ export function createProgram(
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
     const error = gl.getProgramInfoLog(program) || 'Unknown linking error';
     gl.deleteProgram(program);
-    
+
     throw new ProgramLinkingError(
       `Program linking failed: ${error}`,
       error
@@ -172,6 +181,7 @@ export function createBasicShaderProgram(gl: WebGLRenderingContext): ShaderProgr
   // Get uniform locations
   const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
   const colorLocation = gl.getUniformLocation(program, 'u_color');
+  const brushSizeLocation = gl.getUniformLocation(program, 'u_brushSize');
 
   // Clean up shaders (they're linked into the program now)
   gl.deleteShader(vertexShader);
@@ -182,6 +192,7 @@ export function createBasicShaderProgram(gl: WebGLRenderingContext): ShaderProgr
     pressureLocation,
     hasResolutionUniform: resolutionLocation !== null,
     hasColorUniform: colorLocation !== null,
+    hasBrushSizeUniform: brushSizeLocation !== null,
   });
 
   return {
@@ -193,6 +204,7 @@ export function createBasicShaderProgram(gl: WebGLRenderingContext): ShaderProgr
     uniforms: {
       resolution: resolutionLocation,
       color: colorLocation,
+      brushSize: brushSizeLocation,
     },
   };
 }
@@ -251,8 +263,14 @@ export function setupShaderUniforms(
     gl.uniform4f(shaderProgram.uniforms.color, 0.0, 0.0, 0.0, 1.0);
   }
 
+  // Set default brush size
+  if (shaderProgram.uniforms.brushSize) {
+    gl.uniform1f(shaderProgram.uniforms.brushSize, 2.0);
+  }
+
   console.log('Shader uniforms initialized:', {
     resolution: [canvasWidth, canvasHeight],
     color: [0.0, 0.0, 0.0, 1.0],
+    brushSize: 2.0,
   });
 }

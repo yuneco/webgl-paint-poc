@@ -4,8 +4,8 @@ import * as CoreTypes from '../types/core';
 import { initializeWebGL } from './context';
 import { createBasicShaderProgram, setupShaderUniforms } from './shaders';
 import type { ShaderProgram } from './shaders';
-import { 
-  strokeDataToVertexData, 
+import {
+  strokeDataToVertexData,
   multipleStrokesToVertexData,
   createVertexBuffer,
   bindVertexBuffer,
@@ -52,7 +52,7 @@ export function initializeRenderer(canvasId: string): WebGLRenderer {
 
     // Clear color (white background as per spec)
     gl.clearColor(1.0, 1.0, 1.0, 1.0);
-    
+
     // Enable blending for smooth lines
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -88,16 +88,38 @@ export function clearCanvas(renderer: WebGLRenderer): void {
  * Set the drawing color
  */
 export function setDrawingColor(
-  renderer: WebGLRenderer, 
-  red: number, 
-  green: number, 
-  blue: number, 
+  renderer: WebGLRenderer,
+  red: number,
+  green: number,
+  blue: number,
   alpha: number = 1.0
 ): void {
   renderer.gl.useProgram(renderer.shaderProgram.program);
-  
+
   if (renderer.shaderProgram.uniforms.color) {
     renderer.gl.uniform4f(renderer.shaderProgram.uniforms.color, red, green, blue, alpha);
+  }
+}
+
+/**
+ * Set the brush size
+ */
+export function setBrushSize(renderer: WebGLRenderer, size: number): void {
+  renderer.gl.useProgram(renderer.shaderProgram.program);
+
+  if (renderer.shaderProgram.uniforms.brushSize) {
+    renderer.gl.uniform1f(renderer.shaderProgram.uniforms.brushSize, size);
+  }
+
+  // Also try to set gl.lineWidth for line strip rendering
+  // Note: Most browsers limit this to 1.0, but we'll try anyway
+  console.log("🌟MAX=", renderer.gl.getParameter(renderer.gl.ALIASED_LINE_WIDTH_RANGE))
+  try {
+    renderer.gl.lineWidth(size);
+    console.log("🌟renderer.gl.lineWidth", size)
+  } catch (error) {
+    // lineWidth might not be supported or might be clamped
+    console.warn('gl.lineWidth not supported or clamped:', error);
   }
 }
 
@@ -113,13 +135,16 @@ export function renderStroke(renderer: WebGLRenderer, stroke: StrokeData): void 
 
   // Convert stroke to vertex data
   const vertexData = strokeDataToVertexData(stroke);
-  
+
   // Create vertex buffer
   const vertexBuffer = createVertexBuffer(gl, vertexData);
 
   try {
     // Use shader program
     gl.useProgram(shaderProgram.program);
+
+    // Ensure brush size uniform is set with current value
+    // This should be called externally through setBrushSize before rendering
 
     // Bind vertex buffer and attributes
     bindVertexBuffer(
@@ -179,7 +204,7 @@ export function renderStrokesAsPoints(renderer: WebGLRenderer, strokes: StrokeDa
 
   // Convert all strokes to combined vertex data
   const vertexData = multipleStrokesToVertexData(strokes);
-  
+
   // Create vertex buffer
   const vertexBuffer = createVertexBuffer(gl, vertexData);
 
@@ -231,10 +256,10 @@ export function renderTestPattern(renderer: WebGLRenderer, strokes: StrokeData[]
  */
 export function cleanupRenderer(renderer: WebGLRenderer): void {
   const { gl, shaderProgram } = renderer;
-  
+
   if (gl.isProgram(shaderProgram.program)) {
     gl.deleteProgram(shaderProgram.program);
   }
-  
+
   console.log('Renderer cleanup completed');
 }

@@ -5,6 +5,7 @@
 
 import { WebGLRenderer } from '../webgl/WebGLRenderer';
 import { InputProcessor } from '../input/InputProcessor';
+import { ExtendedInputProcessor, DEFAULT_EXTENDED_INPUT_PROCESSOR_CONFIG } from '../input/ExtendedInputProcessor';
 import { CanvasManager } from './CanvasManager';
 import { DrawingCoordinator } from './DrawingCoordinator';
 import { DebugManager } from './DebugManager';
@@ -40,8 +41,11 @@ export class PaintAppFactory {
     // 3. WebGL描画エンジンの初期化
     const renderer = new WebGLRenderer(canvas);
 
-    // 4. 入力処理の初期化
-    const inputProcessor = new InputProcessor(canvas);
+    // 4. 入力処理の初期化（Task 6.6統合: ExtendedInputProcessor使用）
+    const inputProcessor = new ExtendedInputProcessor(canvas, undefined, {
+      ...DEFAULT_EXTENDED_INPUT_PROCESSOR_CONFIG,
+      enableQualityMonitoring: config.enableDebug
+    });
 
     // 5. 描画統合管理の初期化
     const drawingCoordinator = new DrawingCoordinator(

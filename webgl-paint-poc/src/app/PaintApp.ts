@@ -5,6 +5,7 @@
 
 import { WebGLRenderer } from '../webgl/WebGLRenderer';
 import { InputProcessor } from '../input/InputProcessor';
+import { ExtendedInputProcessor } from '../input/ExtendedInputProcessor';
 import { CanvasManager } from './CanvasManager';
 import { DrawingCoordinator } from './DrawingCoordinator';
 import { DebugManager } from './DebugManager';
@@ -99,6 +100,63 @@ export class PaintApp {
    */
   getDebugState(): any {
     return this.managers.debugManager.getDebugState();
+  }
+
+  // =============================================================================
+  // 描画設定API（Task 6.6 統合）
+  // =============================================================================
+
+  /**
+   * ブラシサイズを設定
+   */
+  setBrushSize(size: number): void {
+    this.managers.drawingCoordinator.setBrushSize(size);
+  }
+
+  /**
+   * 筆圧補正を有効/無効にする
+   */
+  enablePressureCorrection(enabled: boolean): void {
+    if (this.managers.inputProcessor instanceof ExtendedInputProcessor) {
+      this.managers.inputProcessor.enablePressureCorrection(enabled);
+    }
+  }
+
+  /**
+   * スムージング強度を設定（0.0-1.0）
+   */
+  setSmoothingStrength(strength: number): void {
+    if (this.managers.inputProcessor instanceof ExtendedInputProcessor) {
+      this.managers.inputProcessor.setSmoothingStrength(strength);
+    }
+  }
+
+  /**
+   * スムージング方法を設定
+   */
+  setSmoothingMethod(method: 'linear' | 'catmull-rom'): void {
+    if (this.managers.inputProcessor instanceof ExtendedInputProcessor) {
+      this.managers.inputProcessor.setSmoothingMethod(method);
+    }
+  }
+
+  /**
+   * リアルタイムモードを設定
+   */
+  setRealtimeMode(enabled: boolean): void {
+    if (this.managers.inputProcessor instanceof ExtendedInputProcessor) {
+      this.managers.inputProcessor.setRealtimeMode(enabled);
+    }
+  }
+
+  /**
+   * 補正品質メトリクスを取得
+   */
+  getCorrectionQualityMetrics() {
+    if (this.managers.inputProcessor instanceof ExtendedInputProcessor) {
+      return this.managers.inputProcessor.getCorrectionQualityMetrics();
+    }
+    return null;
   }
 
   // =============================================================================

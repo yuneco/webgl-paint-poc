@@ -16,18 +16,18 @@ const initialDrawingState = {
     isInitialized: false,
     canvasSize: { width: 1024, height: 1024 },
     color: [0, 0, 0, 1] as [number, number, number, number], // Black
-    brushSize: 2,
+    brushSize: 20,
     opacity: 1.0,
     isDrawing: false,
     currentStroke: [],
   } as DrawingEngineState,
-  
+
   history: {
     strokes: [],
     historyIndex: 0,
     maxHistorySize: 100,
   } as DrawingHistoryState,
-  
+
   symmetry: {
     enabled: true,
     axisCount: 8,
@@ -175,7 +175,7 @@ export const drawingStore = createStore<DrawingStoreState>()(
           (state) => ({
             drawingEngine: {
               ...state.drawingEngine,
-              currentStroke: state.drawingEngine.isDrawing 
+              currentStroke: state.drawingEngine.isDrawing
                 ? [...state.drawingEngine.currentStroke, point]
                 : state.drawingEngine.currentStroke,
             },
@@ -190,7 +190,7 @@ export const drawingStore = createStore<DrawingStoreState>()(
         set(
           (state) => {
             if (!state.drawingEngine.isDrawing) return state;
-            
+
             const finalStroke = [...state.drawingEngine.currentStroke, point];
             const strokeData: StrokeData = {
               id: `stroke_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -306,7 +306,7 @@ export const drawingStore = createStore<DrawingStoreState>()(
         set(
           (state) => {
             const newStrokes = [...state.history.strokes.slice(0, state.history.historyIndex), stroke];
-            
+
             // 最大履歴数を超えた場合、古いものから削除
             if (newStrokes.length > state.history.maxHistorySize) {
               newStrokes.shift();

@@ -27,6 +27,15 @@ const initialUIState: UIState = {
     showSymmetryAxes: false,
     showGrid: false,
   },
+  inputCorrection: {
+    pressureCorrectionEnabled: true,
+    smoothingEnabled: true,
+    smoothingStrength: 0.3,
+    smoothingMethod: 'linear',
+    realtimeMode: true,
+    penThickness: 2.0,
+    showQualityMetrics: false,
+  },
 };
 
 /**
@@ -48,6 +57,15 @@ export interface UIStoreState extends UIState {
   toggleSymmetryAxes: () => void;
   toggleGrid: () => void;
   setDebugMode: (enabled: boolean) => void;
+
+  // Input Correction UI Actions (Task 6.6)
+  setPressureCorrectionEnabled: (enabled: boolean) => void;
+  setSmoothingEnabled: (enabled: boolean) => void;
+  setSmoothingStrength: (strength: number) => void;
+  setSmoothingMethod: (method: 'linear' | 'catmull-rom') => void;
+  setRealtimeMode: (enabled: boolean) => void;
+  setPenThickness: (thickness: number) => void;
+  toggleQualityMetrics: () => void;
 
   // Bulk Actions
   resetUI: () => void;
@@ -204,6 +222,101 @@ export const uiStore = createStore<UIStoreState>()(
           }),
           false,
           'setDebugMode'
+        );
+      },
+
+      // =============================================================================
+      // INPUT CORRECTION UI ACTIONS (Task 6.6)
+      // =============================================================================
+
+      setPressureCorrectionEnabled: (enabled) => {
+        set(
+          (state) => ({
+            inputCorrection: {
+              ...state.inputCorrection,
+              pressureCorrectionEnabled: enabled,
+            },
+          }),
+          false,
+          'setPressureCorrectionEnabled'
+        );
+      },
+
+      setSmoothingEnabled: (enabled) => {
+        set(
+          (state) => ({
+            inputCorrection: {
+              ...state.inputCorrection,
+              smoothingEnabled: enabled,
+            },
+          }),
+          false,
+          'setSmoothingEnabled'
+        );
+      },
+
+      setSmoothingStrength: (strength) => {
+        set(
+          (state) => ({
+            inputCorrection: {
+              ...state.inputCorrection,
+              smoothingStrength: Math.max(0, Math.min(1, strength)),
+            },
+          }),
+          false,
+          'setSmoothingStrength'
+        );
+      },
+
+      setSmoothingMethod: (method) => {
+        set(
+          (state) => ({
+            inputCorrection: {
+              ...state.inputCorrection,
+              smoothingMethod: method,
+            },
+          }),
+          false,
+          'setSmoothingMethod'
+        );
+      },
+
+      setRealtimeMode: (enabled) => {
+        set(
+          (state) => ({
+            inputCorrection: {
+              ...state.inputCorrection,
+              realtimeMode: enabled,
+            },
+          }),
+          false,
+          'setRealtimeMode'
+        );
+      },
+
+      setPenThickness: (thickness) => {
+        set(
+          (state) => ({
+            inputCorrection: {
+              ...state.inputCorrection,
+              penThickness: Math.max(0.1, Math.min(10, thickness)),
+            },
+          }),
+          false,
+          'setPenThickness'
+        );
+      },
+
+      toggleQualityMetrics: () => {
+        set(
+          (state) => ({
+            inputCorrection: {
+              ...state.inputCorrection,
+              showQualityMetrics: !state.inputCorrection.showQualityMetrics,
+            },
+          }),
+          false,
+          'toggleQualityMetrics'
         );
       },
 

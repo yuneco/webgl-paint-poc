@@ -128,6 +128,9 @@ export class DrawingCoordinator {
     // 既存の描画をクリア
     this.renderer.clear();
     
+    // 現在のブラシサイズを設定
+    this.renderer.setBrushSize(state.drawingEngine.brushSize);
+    
     // 保存済みストロークを描画
     this.renderSavedStrokes();
     
@@ -196,7 +199,12 @@ export class DrawingCoordinator {
    * PaintApp.render()から移植
    */
   render(): void {
+    const state = drawingStore.getState();
     this.renderer.clear();
+    
+    // 現在のブラシサイズを設定
+    this.renderer.setBrushSize(state.drawingEngine.brushSize);
+    
     this.renderSavedStrokes();
   }
 
@@ -227,6 +235,22 @@ export class DrawingCoordinator {
     
     if (this.isDebugEnabled()) {
       console.log('Symmetry updated:', { enabled, axisCount });
+    }
+  }
+
+  /**
+   * ブラシサイズを設定
+   * Task 6.6 統合: UI制御から描画エンジンへの設定伝達
+   */
+  setBrushSize(size: number): void {
+    const store = drawingStore.getState();
+    store.setBrushSize(size);
+    
+    // レンダラーにもブラシサイズを反映
+    this.renderer.setBrushSize(size);
+    
+    if (this.isDebugEnabled()) {
+      console.log('Brush size updated:', size);
     }
   }
 }

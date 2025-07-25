@@ -10,6 +10,7 @@ import {
   renderStrokes as renderStrokesFunc,
   renderStrokesAsPoints as renderStrokesAsPointsFunc,
   setDrawingColor as setDrawingColorFunc,
+  setBrushSize as setBrushSizeFunc,
   cleanupRenderer as cleanupRendererFunc,
   type WebGLRenderer as WebGLRendererInterface 
 } from './renderer';
@@ -66,6 +67,13 @@ export class WebGLRenderer {
    */
   setDrawingColor(r: number, g: number, b: number, a: number = 1.0): void {
     setDrawingColorFunc(this.renderer, r, g, b, a);
+  }
+
+  /**
+   * ブラシサイズを設定
+   */
+  setBrushSize(size: number): void {
+    setBrushSizeFunc(this.renderer, size);
   }
 
   /**
