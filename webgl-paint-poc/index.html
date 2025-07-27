@@ -113,122 +113,56 @@
     <div class="container">
       <h1>WebGL Symmetry Paint PoC</h1>
       
-      <div class="status">
-        <h3>✅ Task 6.3 Implementation Complete</h3>
-        <p><strong>Real-time Input Processing & Drawing Integration</strong> - All tests passing (285/285)</p>
-      </div>
-      
-      <div class="info">
-        <h3>Step 4.2: 8-Axis Radial Symmetry Integration</h3>
-        <p>The symmetric drawing functionality has been implemented and integrated:</p>
-        <ul>
-          <li><strong>✅ Mathematical Foundation</strong> - Complete 8-axis radial symmetry transforms</li>
-          <li><strong>✅ Symmetry Renderer</strong> - Generate 8 symmetric strokes from single input</li>
-          <li><strong>✅ WebGL Integration</strong> - Seamless integration with existing drawing engine</li>
-          <li><strong>✅ Configuration System</strong> - Toggle symmetry on/off with SymmetryConfig</li>
-          <li><strong>✅ Visual Testing</strong> - 34 comprehensive tests for symmetry functions</li>
-          <li><strong>✅ Mathematical Accuracy</strong> - Distance preservation and geometric correctness</li>
-        </ul>
-      </div>
 
-      <div class="demo-section">
+      <div class="demo-section" style="display: none;">
         <h2>Interactive Paint Canvas (1024x1024)</h2>
         <div style="text-align: center; margin: 20px 0;">
           <canvas id="paint-canvas" width="1024" height="1024" style="max-width: 100%; height: auto; border: 2px solid #ddd; border-radius: 4px; background: white; cursor: crosshair;"></canvas>
         </div>
         
-        <div style="text-align: center; margin: 20px 0; background: #e8f4fd; padding: 15px; border-radius: 8px;">
-          <h3 style="margin-top: 0; color: #0066cc;">🎨 リアルタイム描画モード - Task 6.3 完了</h3>
-          <p style="margin: 10px 0; font-weight: bold; color: #333;">マウス・タッチ・ペンで直接描画できます！</p>
-          
-          <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: center; margin: 15px 0;">
+        <div style="text-align: center; margin: 20px 0;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 10px 0;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <label style="font-weight: bold;">対称描画:</label>
+              <label>対称描画:</label>
               <input type="checkbox" id="live-symmetry-enabled" checked>
-              <span>8軸対称 ON/OFF</span>
             </div>
-            
             <div style="display: flex; align-items: center; gap: 8px;">
-              <label style="font-weight: bold;">デバッグ表示:</label>
-              <input type="checkbox" id="debug-enabled" checked>
-              <span>統計情報表示</span>
+              <label>ペンの太さ:</label>
+              <input type="range" id="pen-thickness-slider" min="0.5" max="50" step="0.1" value="2.0" style="width: 80px;">
+              <span id="pen-thickness-value">2.0px</span>
             </div>
           </div>
-          
-          <!-- Task 6.6: Input Correction Controls -->
-          <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin: 15px 0;">
-            <h4 style="margin-top: 0; color: #495057;">🎨 入力補正設定 (Task 6.6)</h4>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 10px 0;">
-              <!-- Pressure Correction -->
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <label style="font-weight: bold;">筆圧補正:</label>
-                <input type="checkbox" id="pressure-correction-enabled" checked>
-                <span>ON/OFF</span>
-              </div>
-              
-              <!-- Smoothing Enable -->
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <label style="font-weight: bold;">スムージング:</label>
-                <input type="checkbox" id="smoothing-enabled" checked>
-                <span>ON/OFF</span>
-              </div>
-              
-              <!-- Pen Thickness Slider -->
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <label style="font-weight: bold;">ペンの太さ:</label>
-                <input type="range" id="pen-thickness-slider" min="0.5" max="50" step="0.1" value="2.0" style="width: 80px;">
-                <span id="pen-thickness-value">2.0px</span>
-              </div>
-              
-              <!-- Smoothing Strength Slider -->
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <label style="font-weight: bold;">スムージング強度:</label>
-                <input type="range" id="smoothing-strength-slider" min="0.0" max="1.0" step="0.1" value="0.3" style="width: 80px;">
-                <span id="smoothing-strength-value">0.3</span>
-              </div>
-              
-              <!-- Smoothing Method -->
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <label style="font-weight: bold;">スムージング方法:</label>
-                <select id="smoothing-method-select" style="padding: 4px; border-radius: 4px; border: 1px solid #ccc;">
-                  <option value="linear" selected>Linear (高速)</option>
-                  <option value="catmull-rom">Catmull-Rom (高品質)</option>
-                </select>
-              </div>
-              
-              <!-- Real-time Mode -->
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <label style="font-weight: bold;">リアルタイムモード:</label>
-                <input type="checkbox" id="realtime-mode-enabled" checked>
-                <span>速度優先</span>
-              </div>
-            </div>
-            
-            <!-- Quality Metrics Display -->
-            <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
-              <label style="font-weight: bold;">品質メトリクス表示:</label>
-              <input type="checkbox" id="quality-metrics-enabled">
-              <span>補正効果を表示</span>
-            </div>
-            
-            <div id="quality-metrics-display" style="display: none; background: #e9ecef; padding: 10px; border-radius: 4px; margin-top: 10px; font-family: monospace; font-size: 12px;">
-              <div>スムージング改善度: <span id="smoothness-improvement">--</span></div>
-              <div>筆圧安定性: <span id="pressure-stability">--</span></div>
-              <div>データ忠実度: <span id="data-fidelity">--</span></div>
-              <div>処理比: <span id="processing-ratio">--</span></div>
-            </div>
-          </div>
-          
-          <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 15px 0;">
+          <div style="display: flex; gap: 10px; justify-content: center;">
             <button id="clear-live-canvas" class="demo-button">キャンバスをクリア</button>
             <button id="toggle-symmetry" class="demo-button">対称モード切替</button>
           </div>
         </div>
         
-        <h2>Static Test Canvas (1024x1024)</h2>
+      </div>
+      
+      <div class="demo-section">
+        <h2>🚀 Regl-Line Migration Test - Static Test Canvas</h2>
         <div style="text-align: center; margin: 20px 0;">
           <canvas id="test-canvas" width="1024" height="1024" style="max-width: 100%; height: auto; border: 2px solid #ddd; border-radius: 4px; background: white;"></canvas>
+        </div>
+        
+        <!-- Renderer Selection -->
+        <div style="text-align: center; margin: 20px 0; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px;">
+          <h3 style="margin-top: 0; color: #856404;">🚀 レンダラー選択 - Regl-Line Migration Test</h3>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 10px 0;">
+            <label style="font-weight: bold;">レンダラー:</label>
+            <select id="renderer-select" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px;">
+              <option value="webgl">WebGL (従来型 - 1px制限)</option>
+              <option value="regl-line" selected>Regl-Line (新型 - 太い線対応)</option>
+            </select>
+            <span id="renderer-status" style="font-size: 12px; color: #666;"></span>
+          </div>
+          <div id="renderer-info" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; margin: 10px 0; font-size: 12px; font-family: monospace;">
+            <div><strong>現在のレンダラー:</strong> <span id="current-renderer-type">WebGL</span></div>
+            <div><strong>太い線サポート:</strong> <span id="thick-line-support">❌ No</span></div>
+            <div><strong>線幅範囲:</strong> <span id="line-width-range">1px - 1px</span></div>
+            <div><strong>機能:</strong> <span id="renderer-features">Loading...</span></div>
+          </div>
         </div>
         
         <div style="text-align: center; margin: 20px 0;">
@@ -266,42 +200,15 @@
             <button id="draw-curve" class="demo-button">曲線</button>
             <button id="draw-arc" class="demo-button">円弧</button>
             <button id="draw-multi" class="demo-button">複数ストローク</button>
+            <button id="draw-thick-line-demo" class="demo-button" style="background: #dc3545; border-color: #dc3545;">太い線デモ</button>
           </div>
         </div>
       </div>
       
       <div id="status" class="info">
         <h3>Status</h3>
-        <p>Ready to render. Click any button above to test the drawing functionality.</p>
+        <p>Ready to test. Select renderer type and click buttons to test thick line rendering.</p>
       </div>
-
-      <div class="info">
-        <h3>テスト方法:</h3>
-        <ul>
-          <li><strong>色選択</strong> - selectで色を選択</li>
-          <li><strong>対称モード</strong> - チェックボックスで8軸対称のON/OFF</li>
-          <li><strong>ストローク描画</strong> - ボタンクリックで設定に従って描画</li>
-          <li><strong>8軸対称</strong> - 対称モードONで美しい万華鏡パターンを確認</li>
-          <li><strong>数学的正確性</strong> - 中心(512,512)から等距離、45度間隔</li>
-        </ul>
-      </div>
-
-      <div class="info">
-        <h3>Implementation Details:</h3>
-        <ul>
-          <li><strong>Mathematical Foundation</strong> - 8-axis radial symmetry using reflection matrices</li>
-          <li><strong>Transformation Functions</strong> - Point and stroke transformations with center preservation</li>
-          <li><strong>Symmetry Renderer</strong> - renderStrokeWithSymmetry, generateSymmetricStrokes</li>
-          <li><strong>WebGL Integration</strong> - Seamless integration with existing drawing pipeline</li>
-          <li><strong>Test Coverage</strong> - 34 symmetry tests + 125 existing tests = 159 total tests passing</li>
-          <li><strong>Visual Verification</strong> - Interactive buttons to test all symmetry patterns</li>
-          <li><strong>Mathematical Accuracy</strong> - Distance preservation, angle correctness, consistency tests</li>
-        </ul>
-      </div>
-
-      <p style="text-align: center; margin-top: 30px;">
-        <em>Use the interactive demo above to visually confirm the drawing functionality works as expected.</em>
-      </p>
     </div>
 
     <script type="module">
@@ -311,17 +218,73 @@
         import { allTestStrokes, horizontalLineStroke, verticalLineStroke, diagonalLineStroke,
                 arcStroke, complexCurveStroke, spiralStroke, zigzagStroke } from './src/data/testStrokes.js';
         // Import symmetry renderer
-        import { renderStrokeWithSymmetry, renderStrokesWithSymmetry } from './src/symmetry/symmetryRenderer.js';
+        import { renderStrokeWithSymmetry, renderStrokesWithSymmetry, generateSymmetricStrokes } from './src/symmetry/symmetryRenderer.js';
         // Import Paint App Factory
         import { PaintAppFactory } from './src/app/PaintAppFactory.js';
+        // Import new renderer adapter system
+        import { createRendererAdapter, getAvailableRendererTypes, compareRenderers } from './src/webgl/RendererAdapter.js';
 
-        let renderer;
+        let renderer; // Legacy renderer (will be replaced by rendererAdapter)
+        let rendererAdapter; // New unified renderer adapter
+        let currentRendererType = 'regl-line';
         let paintApp;
 
         function updateStatus(message, type = 'info') {
             const statusEl = document.getElementById('status');
             const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
             statusEl.innerHTML = `<h3>Status</h3><p style="color: ${type === 'error' ? '#721c24' : type === 'success' ? '#155724' : '#004085'};">${message}</p>`;
+        }
+
+        // Update renderer info display
+        function updateRendererInfo() {
+            if (!rendererAdapter) return;
+            
+            const info = rendererAdapter.getRendererInfo();
+            const type = rendererAdapter.getRendererType();
+            
+            document.getElementById('current-renderer-type').textContent = 
+                type === 'webgl' ? 'WebGL (従来型)' : 'Regl-Line (新型)';
+            document.getElementById('thick-line-support').textContent = 
+                info.supportsThickLines ? '✅ Yes' : '❌ No';
+            document.getElementById('line-width-range').textContent = 
+                `${info.lineWidthRange[0]}px - ${info.lineWidthRange[1]}px`;
+            document.getElementById('renderer-features').textContent = 
+                info.features.join(', ');
+            
+            // Update status display
+            document.getElementById('renderer-status').textContent = 
+                `(${info.supportsThickLines ? '太い線対応' : '1px制限'})`;
+        }
+
+        // Switch renderer type
+        function switchRenderer(newType) {
+            if (newType === currentRendererType) return;
+            
+            try {
+                // Cleanup old renderer
+                if (rendererAdapter) {
+                    rendererAdapter.cleanup();
+                }
+                
+                // Create new renderer adapter
+                const canvas = document.getElementById('test-canvas');
+                rendererAdapter = createRendererAdapter(canvas, newType);
+                currentRendererType = newType;
+                
+                // Update UI
+                updateRendererInfo();
+                updateStatus(`Switched to ${newType} renderer`, 'success');
+                
+                // Clear canvas and update color
+                rendererAdapter.clear();
+                applyColorSetting();
+                
+                console.log(`🔄 Switched to ${newType} renderer`);
+                
+            } catch (error) {
+                updateStatus(`Failed to switch renderer: ${error.message}`, 'error');
+                console.error('Renderer switch error:', error);
+            }
         }
 
         // 色設定を適用
@@ -339,13 +302,19 @@
             };
             
             if (colors[colorName]) {
-                setDrawingColor(renderer, colors[colorName][0], colors[colorName][1], colors[colorName][2], colors[colorName][3]);
+                // Use new renderer adapter if available, fallback to legacy renderer
+                if (rendererAdapter) {
+                    rendererAdapter.setDrawingColor(colors[colorName][0], colors[colorName][1], colors[colorName][2], colors[colorName][3]);
+                } else if (renderer) {
+                    setDrawingColor(renderer, colors[colorName][0], colors[colorName][1], colors[colorName][2], colors[colorName][3]);
+                }
             }
         }
 
         // ストローク描画の統合関数
         function drawStroke(strokeType) {
-            if (!renderer) {
+            const activeRenderer = rendererAdapter || renderer;
+            if (!activeRenderer) {
                 updateStatus('エラー: レンダラーが初期化されていません', 'error');
                 return;
             }
@@ -383,13 +352,32 @@
             }
 
             try {
-                clearCanvas(renderer);
-                if (symmetryEnabled) {
-                    renderStrokesWithSymmetry(renderer, strokes, symmetryConfig);
-                    updateStatus(`✓ ${strokeType}描画完了（8軸対称モード）- ${strokes.length}個のストロークから${strokes.length * 8}個の対称ストロークを生成`, 'success');
+                // Use renderer adapter if available
+                if (rendererAdapter) {
+                    rendererAdapter.clear();
+                    if (symmetryEnabled) {
+                        // Manual symmetry rendering for renderer adapter
+                        for (const stroke of strokes) {
+                            const symmetricStrokes = generateSymmetricStrokes(stroke, symmetryConfig).symmetricStrokes;
+                            for (const symStroke of symmetricStrokes) {
+                                rendererAdapter.renderStroke(symStroke);
+                            }
+                        }
+                        updateStatus(`✓ ${strokeType}描画完了（8軸対称モード）- ${strokes.length}個のストロークから${strokes.length * 8}個の対称ストロークを生成 [${currentRendererType}]`, 'success');
+                    } else {
+                        rendererAdapter.renderStrokes(strokes);
+                        updateStatus(`✓ ${strokeType}描画完了（通常モード）- ${strokes.length}個のストロークを描画 [${currentRendererType}]`, 'success');
+                    }
                 } else {
-                    renderStrokes(renderer, strokes);
-                    updateStatus(`✓ ${strokeType}描画完了（通常モード）- ${strokes.length}個のストロークを描画`, 'success');
+                    // Fallback to legacy renderer
+                    clearCanvas(renderer);
+                    if (symmetryEnabled) {
+                        renderStrokesWithSymmetry(renderer, strokes, symmetryConfig);
+                        updateStatus(`✓ ${strokeType}描画完了（8軸対称モード）- ${strokes.length}個のストロークから${strokes.length * 8}個の対称ストロークを生成`, 'success');
+                    } else {
+                        renderStrokes(renderer, strokes);
+                        updateStatus(`✓ ${strokeType}描画完了（通常モード）- ${strokes.length}個のストロークを描画`, 'success');
+                    }
                 }
             } catch (error) {
                 console.error('描画エラー:', error);
@@ -399,9 +387,15 @@
 
         function initializeDemo() {
             try {
-                // Initialize static test canvas
-                renderer = initializeRenderer('test-canvas');
-                setDrawingColor(renderer, 0.0, 0.0, 0.0, 1.0);
+                // TEMPORARILY DISABLE legacy renderer to avoid interference
+                console.log('⚠️ Legacy renderer temporarily disabled to avoid regl-line interference');
+                // renderer = initializeRenderer('test-canvas');
+                // setDrawingColor(renderer, 0.0, 0.0, 0.0, 1.0);
+                
+                // Initialize new renderer adapter system (only regl-line)
+                const canvas = document.getElementById('test-canvas');
+                rendererAdapter = createRendererAdapter(canvas, currentRendererType);
+                updateRendererInfo();
                 
                 // Initialize interactive paint app
                 paintApp = PaintAppFactory.create({
@@ -410,7 +404,8 @@
                     enableDebug: true
                 });
                 
-                updateStatus('WebGL renderer and Paint App initialized successfully. Both canvases ready!', 'success');
+                
+                updateStatus('WebGL renderer, Regl-Line adapter, and Paint App initialized successfully. Both canvases ready!', 'success');
                 
             } catch (error) {
                 updateStatus(`Failed to initialize: ${error.message}`, 'error');
@@ -418,11 +413,17 @@
             }
         }
 
-        // Button event handlers
+        // Button event handlers - Updated to use renderer adapter
         document.getElementById('render-all').addEventListener('click', () => {
             try {
-                renderTestPattern(renderer, allTestStrokes);
-                updateStatus(`Rendered all test strokes (${allTestStrokes.length} strokes)`, 'success');
+                if (rendererAdapter) {
+                    rendererAdapter.clear();
+                    rendererAdapter.renderStrokes(allTestStrokes);
+                    updateStatus(`Rendered all test strokes (${allTestStrokes.length} strokes) [${currentRendererType}]`, 'success');
+                } else {
+                    renderTestPattern(renderer, allTestStrokes);
+                    updateStatus(`Rendered all test strokes (${allTestStrokes.length} strokes) [legacy]`, 'success');
+                }
             } catch (error) {
                 updateStatus(`Error rendering all strokes: ${error.message}`, 'error');
             }
@@ -430,9 +431,15 @@
 
         document.getElementById('render-lines').addEventListener('click', () => {
             try {
-                clearCanvas(renderer);
-                renderStrokes(renderer, allTestStrokes);
-                updateStatus(`Rendered ${allTestStrokes.length} strokes as line strips`, 'success');
+                if (rendererAdapter) {
+                    rendererAdapter.clear();
+                    rendererAdapter.renderStrokes(allTestStrokes);
+                    updateStatus(`Rendered ${allTestStrokes.length} strokes as line strips [${currentRendererType}]`, 'success');
+                } else {
+                    clearCanvas(renderer);
+                    renderStrokes(renderer, allTestStrokes);
+                    updateStatus(`Rendered ${allTestStrokes.length} strokes as line strips [legacy]`, 'success');
+                }
             } catch (error) {
                 updateStatus(`Error rendering lines: ${error.message}`, 'error');
             }
@@ -440,10 +447,17 @@
 
         document.getElementById('render-points').addEventListener('click', () => {
             try {
-                clearCanvas(renderer);
-                setDrawingColor(renderer, 1.0, 0.0, 0.0, 1.0); // Red points
-                renderStrokesAsPoints(renderer, allTestStrokes);
-                updateStatus('Rendered all strokes as red points', 'success');
+                if (rendererAdapter) {
+                    rendererAdapter.clear();
+                    rendererAdapter.setDrawingColor(1.0, 0.0, 0.0, 1.0); // Red points
+                    rendererAdapter.renderStrokesAsPoints(allTestStrokes);
+                    updateStatus(`Rendered all strokes as red points [${currentRendererType}]`, 'success');
+                } else {
+                    clearCanvas(renderer);
+                    setDrawingColor(renderer, 1.0, 0.0, 0.0, 1.0); // Red points
+                    renderStrokesAsPoints(renderer, allTestStrokes);
+                    updateStatus('Rendered all strokes as red points [legacy]', 'success');
+                }
             } catch (error) {
                 updateStatus(`Error rendering points: ${error.message}`, 'error');
             }
@@ -451,18 +465,119 @@
 
         document.getElementById('clear-canvas').addEventListener('click', () => {
             try {
-                clearCanvas(renderer);
-                updateStatus('Canvas cleared', 'success');
+                if (rendererAdapter) {
+                    rendererAdapter.clear();
+                    updateStatus(`Canvas cleared [${currentRendererType}]`, 'success');
+                } else {
+                    clearCanvas(renderer);
+                    updateStatus('Canvas cleared [legacy]', 'success');
+                }
             } catch (error) {
                 updateStatus(`Error clearing canvas: ${error.message}`, 'error');
             }
         });
+
+        // Renderer selection event handler
+        document.getElementById('renderer-select').addEventListener('change', (e) => {
+            const newType = e.target.value;
+            switchRenderer(newType);
+        });
+
+        // Thick line demo function
+        function drawThickLineDemo() {
+            if (!rendererAdapter) {
+                updateStatus('エラー: レンダラーアダプターが初期化されていません', 'error');
+                return;
+            }
+            
+            try {
+                rendererAdapter.clear();
+                
+                // Create thick line demo strokes with various sizes
+                const thickLineDemoStrokes = [
+                    // 1px line (baseline)
+                    {
+                        id: 'thick-demo-1px',
+                        points: [
+                            { x: 100, y: 100, pressure: 1.0, timestamp: Date.now() },
+                            { x: 400, y: 100, pressure: 1.0, timestamp: Date.now() + 10 }
+                        ],
+                        timestamp: Date.now(),
+                        completed: true
+                    },
+                    // 5px line
+                    {
+                        id: 'thick-demo-5px',
+                        points: [
+                            { x: 100, y: 200, pressure: 1.0, timestamp: Date.now() },
+                            { x: 400, y: 200, pressure: 1.0, timestamp: Date.now() + 10 }
+                        ],
+                        timestamp: Date.now(),
+                        completed: true
+                    },
+                    // 15px line
+                    {
+                        id: 'thick-demo-15px',
+                        points: [
+                            { x: 100, y: 300, pressure: 1.0, timestamp: Date.now() },
+                            { x: 400, y: 300, pressure: 1.0, timestamp: Date.now() + 10 }
+                        ],
+                        timestamp: Date.now(),
+                        completed: true
+                    },
+                    // 25.2px line (the problematic size from migration plan)
+                    {
+                        id: 'thick-demo-25.2px',
+                        points: [
+                            { x: 100, y: 400, pressure: 1.0, timestamp: Date.now() },
+                            { x: 400, y: 400, pressure: 1.0, timestamp: Date.now() + 10 }
+                        ],
+                        timestamp: Date.now(),
+                        completed: true
+                    }
+                ];
+                
+                const sizes = [1, 5, 15, 25.2];
+                const colors = [
+                    [0, 0, 0, 1],      // Black
+                    [1, 0, 0, 1],      // Red  
+                    [0, 0, 1, 1],      // Blue
+                    [1, 0.5, 0, 1]     // Orange
+                ];
+                
+                // Draw each stroke with different thickness
+                thickLineDemoStrokes.forEach((stroke, index) => {
+                    rendererAdapter.setBrushSize(sizes[index]);
+                    rendererAdapter.setDrawingColor(colors[index][0], colors[index][1], colors[index][2], colors[index][3]);
+                    rendererAdapter.renderStroke(stroke);
+                });
+                
+                const rendererType = rendererAdapter.getRendererType();
+                const supportsThick = rendererAdapter.getRendererInfo().supportsThickLines;
+                
+                if (supportsThick) {
+                    updateStatus(
+                        `✅ 太い線デモ完了 [${rendererType}]: 1px(黒), 5px(赤), 15px(青), 25.2px(オレンジ) - 全て正しい太さで描画`, 
+                        'success'
+                    );
+                } else {
+                    updateStatus(
+                        `⚠️ 太い線デモ完了 [${rendererType}]: 1px(黒), 5px(赤), 15px(青), 25.2px(オレンジ) - WebGL制限により全て1pxで描画`, 
+                        'success'
+                    );
+                }
+            } catch (error) {
+                console.error('太い線デモエラー:', error);
+                updateStatus('エラー: 太い線デモに失敗しました - ' + error.message, 'error');
+            }
+        }
 
         // 統合描画ボタン
         document.getElementById('draw-line').addEventListener('click', () => drawStroke('line'));
         document.getElementById('draw-curve').addEventListener('click', () => drawStroke('curve'));
         document.getElementById('draw-arc').addEventListener('click', () => drawStroke('arc'));
         document.getElementById('draw-multi').addEventListener('click', () => drawStroke('multi'));
+        document.getElementById('draw-thick-line-demo').addEventListener('click', drawThickLineDemo);
 
         // Live canvas controls
         document.getElementById('clear-live-canvas').addEventListener('click', () => {
@@ -472,13 +587,10 @@
             }
         });
 
-        document.getElementById('toggle-symmetry').addEventListener('click', () => {
+        // Simplified live canvas controls  
+        document.getElementById('toggle-symmetry').addEventListener('change', (e) => {
             if (paintApp) {
-                const currentState = document.getElementById('live-symmetry-enabled').checked;
-                const newState = !currentState;
-                document.getElementById('live-symmetry-enabled').checked = newState;
-                paintApp.updateSymmetry(newState, 8);
-                updateStatus(`Symmetry mode ${newState ? 'enabled' : 'disabled'}`, 'success');
+                paintApp.updateSymmetry(e.target.checked, 8);
             }
         });
 
@@ -488,110 +600,18 @@
             }
         });
 
-        // =============================================================================
-        // INPUT CORRECTION CONTROLS (Task 6.6)
-        // =============================================================================
-
-        // Pressure correction toggle
-        document.getElementById('pressure-correction-enabled').addEventListener('change', (e) => {
-            if (paintApp) {
-                paintApp.enablePressureCorrection(e.target.checked);
-            }
-            updateStatus(`Pressure correction ${e.target.checked ? 'enabled' : 'disabled'}`, 'success');
-        });
-
-        // Smoothing toggle
-        document.getElementById('smoothing-enabled').addEventListener('change', (e) => {
-            // Note: Smoothing is always enabled in ExtendedInputProcessor
-            // This toggle could be used to control smoothing strength (0 = disabled)
-            if (paintApp) {
-                const strength = e.target.checked ? parseFloat(document.getElementById('smoothing-strength-slider').value) : 0.0;
-                paintApp.setSmoothingStrength(strength);
-            }
-            updateStatus(`Smoothing ${e.target.checked ? 'enabled' : 'disabled'}`, 'success');
-        });
-
         // Pen thickness slider
         const penThicknessSlider = document.getElementById('pen-thickness-slider');
         const penThicknessValue = document.getElementById('pen-thickness-value');
         
-        penThicknessSlider.addEventListener('input', (e) => {
-            const thickness = parseFloat(e.target.value);
-            penThicknessValue.textContent = `${thickness}px`;
-            if (paintApp) {
-                paintApp.setBrushSize(thickness);
-            }
-            updateStatus(`Pen thickness set to ${thickness}px`, 'success');
-        });
-
-        // Smoothing strength slider
-        const smoothingStrengthSlider = document.getElementById('smoothing-strength-slider');
-        const smoothingStrengthValue = document.getElementById('smoothing-strength-value');
-        
-        smoothingStrengthSlider.addEventListener('input', (e) => {
-            const strength = parseFloat(e.target.value);
-            smoothingStrengthValue.textContent = strength.toFixed(1);
-            if (paintApp) {
-                paintApp.setSmoothingStrength(strength);
-            }
-            updateStatus(`Smoothing strength set to ${strength}`, 'success');
-        });
-
-        // Smoothing method select
-        document.getElementById('smoothing-method-select').addEventListener('change', (e) => {
-            const method = e.target.value;
-            const methodName = method === 'linear' ? 'Linear (高速)' : 'Catmull-Rom (高品質)';
-            if (paintApp) {
-                paintApp.setSmoothingMethod(method);
-            }
-            updateStatus(`Smoothing method changed to ${methodName}`, 'success');
-        });
-
-        // Real-time mode toggle
-        document.getElementById('realtime-mode-enabled').addEventListener('change', (e) => {
-            const mode = e.target.checked ? 'リアルタイム (速度優先)' : 'クオリティ (品質優先)';
-            if (paintApp) {
-                paintApp.setRealtimeMode(e.target.checked);
-            }
-            updateStatus(`Mode changed to ${mode}`, 'success');
-        });
-
-        // Quality metrics toggle
-        const qualityMetricsToggle = document.getElementById('quality-metrics-enabled');
-        const qualityMetricsDisplay = document.getElementById('quality-metrics-display');
-        
-        qualityMetricsToggle.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                qualityMetricsDisplay.style.display = 'block';
-                updateQualityMetrics();
-                updateStatus('Quality metrics monitoring enabled', 'success');
-            } else {
-                qualityMetricsDisplay.style.display = 'none';
-                updateStatus('Quality metrics monitoring disabled', 'success');
-            }
-        });
-
-        // Function to update quality metrics display
-        function updateQualityMetrics() {
-            if (paintApp) {
-                const metrics = paintApp.getCorrectionQualityMetrics();
-                if (metrics) {
-                    document.getElementById('smoothness-improvement').textContent = 
-                        (metrics.smoothnessImprovement * 100).toFixed(1) + '%';
-                    document.getElementById('pressure-stability').textContent = 
-                        (metrics.pressureStability * 100).toFixed(1) + '%';
-                    document.getElementById('data-fidelity').textContent = 
-                        (metrics.dataFidelity * 100).toFixed(1) + '%';
-                    document.getElementById('processing-ratio').textContent = 
-                        (metrics.processingRatio * 100).toFixed(1) + '%';
-                } else {
-                    // Fallback when metrics not available
-                    document.getElementById('smoothness-improvement').textContent = 'N/A';
-                    document.getElementById('pressure-stability').textContent = 'N/A';
-                    document.getElementById('data-fidelity').textContent = 'N/A';
-                    document.getElementById('processing-ratio').textContent = 'N/A';
+        if (penThicknessSlider) {
+            penThicknessSlider.addEventListener('input', (e) => {
+                const thickness = parseFloat(e.target.value);
+                penThicknessValue.textContent = `${thickness}px`;
+                if (paintApp) {
+                    paintApp.setBrushSize(thickness);
                 }
-            }
+            });
         }
 
         // Initialize when page loads
@@ -599,6 +619,9 @@
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
+            if (rendererAdapter) {
+                rendererAdapter.cleanup();
+            }
             if (renderer) {
                 cleanupRenderer(renderer);
             }

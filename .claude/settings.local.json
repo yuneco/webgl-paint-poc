@@ -27,7 +27,10 @@
       "Bash(npm run:*)",
       "Bash(tsc --noEmit)",
       "Bash(npx vitest run:*)",
-      "Bash(gh pr view:*)"
+      "Bash(gh pr view:*)",
+      "WebFetch(domain:github.com)",
+      "mcp__playwright__browser_select_option",
+      "WebFetch(domain:www.npmjs.com)"
     ],
     "deny": []
   }

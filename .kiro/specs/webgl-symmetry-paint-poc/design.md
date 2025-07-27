@@ -46,15 +46,25 @@
 └─────────────────┘─────────────────────────────────────┘
 ```
 
-### WebGL 描画パイプライン
+### WebGL 描画パイプライン（regl-line 統合）
 
 ```
-Input Event → Stroke Point → Symmetry Transform → WebGL Batch → GPU Render
-     │              │               │                    │           │
-     │              │               │                    │           │
-  Pressure      Smoothing      8-way Copy         Vertex Buffer   Frame
-  Detection     Algorithm      Generation         Management      Buffer
+Input Event → Stroke Point → Symmetry Transform → Line Triangulation → GPU Render
+     │              │               │                    │                │
+     │              │               │                    │                │
+  Pressure      Smoothing      8-way Copy         Triangle Strip      Frame
+  Detection     Algorithm      Generation         Generation          Buffer
+                                                  (regl-line)
 ```
+
+**重要な設計変更: WebGL 線描画の根本的制限への対応**
+
+WebGL の`gl.lineWidth()`は技術仕様上の制限により実質的に 1px に制限されるため、regl-line ライブラリを使用した三角形分割による線描画に移行する。これにより：
+
+- 任意の線幅制御が可能
+- 筆圧による動的な太さ変更
+- アンチエイリアス、ライン接続、キャップスタイルの完全制御
+- シェーダーレベルでの高品質描画
 
 ## Components and Interfaces
 
@@ -180,35 +190,65 @@ function calculateTilePositions(viewState: ViewState): TilePosition[] {
 }
 ```
 
-### WebGL レンダリング層（最小限のステート）
+### WebGL レンダリング層（regl-line 統合）
 
 ```typescript
-interface WebGLContext {
-  // WebGL固有のステートのみ保持
-  gl: WebGLRenderingContext;
-  shaderProgram: WebGLProgram;
-  buffers: {
-    vertex: WebGLBuffer;
-    index: WebGLBuffer;
+interface ReglLineContext {
+  // regl固有のステートのみ保持
+  regl: REGL.Regl;
+  drawLines: REGL.DrawCommand;
+  framebuffer: REGL.Framebuffer2D;
+  textures: Map<string, REGL.Texture2D>;
+}
+
+interface ReglLineData {
+  positions: number[][]; // 線の座標配列
+  thickness: number[]; // 各点での線の太さ
+  colors: number[][]; // 各点での色情報
+  joins: "miter" | "bevel" | "round"; // 線の接続スタイル
+  caps: "butt" | "square" | "round"; // 線の端点スタイル
+}
+
+// ストロークデータ変換関数（純粋関数）
+function convertStrokeToReglLine(
+  stroke: StrokeData,
+  brushSize: number,
+  color: [number, number, number, number]
+): ReglLineData {
+  return {
+    positions: stroke.points.map((p) => [p.x, p.y]),
+    thickness: stroke.points.map((p) => p.pressure * brushSize),
+    colors: stroke.points.map(() => color),
+    joins: "round",
+    caps: "round",
   };
-  textures: Map<string, WebGLTexture>;
 }
 
 // ステートレス描画関数
-function renderStrokes(
-  context: WebGLContext,
-  vertexData: VertexData[],
-  viewState: ViewState
+function renderStrokesWithRegl(
+  context: ReglLineContext,
+  strokes: StrokeData[],
+  brushSize: number,
+  color: [number, number, number, number]
 ): void {
-  // WebGL描画実行
+  strokes.forEach((stroke) => {
+    const lineData = convertStrokeToReglLine(stroke, brushSize, color);
+    context.drawLines(lineData);
+  });
 }
 
-function renderTiles(
-  context: WebGLContext,
-  tilePositions: TilePosition[],
-  patternTexture: WebGLTexture
+function renderSymmetricStrokesWithRegl(
+  context: ReglLineContext,
+  stroke: StrokeData,
+  symmetryConfig: SymmetryConfig,
+  brushSize: number,
+  color: [number, number, number, number]
 ): void {
-  // タイリング描画実行
+  const symmetricStrokes = generateSymmetricStrokes(stroke, symmetryConfig);
+  symmetricStrokes.forEach((symStroke) => {
+    const lineData = convertStrokeToReglLine(symStroke, brushSize, color);
+    context.drawLines(lineData);
+  });
 }
 ```
 
@@ -286,6 +326,13 @@ interface VertexData {
 
 ## Error Handling
 
+### regl-line 統合エラー処理
+
+- regl ライブラリ初期化失敗時の従来 WebGL へのフォールバック
+- regl-line 描画コマンド作成失敗時の適切なエラー報告
+- 三角形分割処理でのメモリ不足対応
+- 線描画品質劣化時の自動調整機能
+
 ### WebGL エラー処理
 
 - WebGL コンテキスト取得失敗時のフォールバック
@@ -298,12 +345,14 @@ interface VertexData {
 - FPS 低下時の自動品質調整
 - メモリリーク検出と警告
 - 長時間描画セッションでの最適化
+- regl-line 処理負荷による性能劣化の検出と対応
 
 ### 入力エラー処理
 
 - 無効な筆圧値の正規化
 - タッチイベントの重複処理防止
 - 座標範囲外の値のクランプ
+- 線の太さ計算での異常値処理
 
 ## Testing Strategy
 
@@ -343,8 +392,32 @@ interface VertexData {
 
 ## Implementation Notes
 
+### regl-line 移行戦略
+
+**段階的移行アプローチ:**
+
+1. **Phase 1**: regl + regl-line 導入（既存システム並行稼働）
+2. **Phase 2**: 基本線描画の置換・検証
+3. **Phase 3**: 対称描画システム統合
+4. **Phase 4**: 旧 WebGL レンダラーの段階的削除
+
+**技術的利点:**
+
+- 三角形分割による任意線幅制御
+- シェーダーレベルでの筆圧・アンチエイリアス制御
+- Miter/Bevel/Round join 対応
+- 高品質な線描画品質
+
+**統合要件:**
+
+- 既存ストロークデータ形式の互換性維持
+- 対称描画システムとの完全統合
+- パフォーマンス要件（60fps）の維持
+- フィーチャーフラグによる切り替え機能
+
 ### WebGL 最適化戦略
 
+- regl-line による効率的な三角形分割処理
 - インスタンス描画による対称ストローク一括処理
 - 頂点バッファの動的管理とプーリング
 - フレームバッファの効率的な使い回し
@@ -352,15 +425,19 @@ interface VertexData {
 
 ### メモリ管理
 
+- regl-line 三角形データの効率的な管理
 - 描画完了ストロークの適切な破棄
 - WebGL リソースのライフサイクル管理
 - ガベージコレクション圧迫の回避
+- 線描画バッファの動的サイズ調整
 
 ### 開発・デバッグ支援
 
 - WebGL Inspector 統合
+- regl-line 描画品質の視覚的デバッグ
 - リアルタイムシェーダー編集機能
 - パフォーマンスプロファイラー統合
+- 線幅・筆圧マッピングのデバッグツール
 
 ## 入力補正システム設計（タスク 6.6 対応）
 

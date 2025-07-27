@@ -3,13 +3,13 @@
  * 各マネージャーへの委譲とライフサイクル管理のみを担当
  */
 
-import { WebGLRenderer } from '../webgl/WebGLRenderer';
 import { InputProcessor } from '../input/InputProcessor';
 import { ExtendedInputProcessor } from '../input/ExtendedInputProcessor';
 import { CanvasManager } from './CanvasManager';
 import { DrawingCoordinator } from './DrawingCoordinator';
 import { DebugManager } from './DebugManager';
 import { StateSubscriptionManager } from './StateSubscriptionManager';
+import type { RendererAdapter, RendererType } from '../webgl/RendererAdapter';
 
 /**
  * アプリケーション設定
@@ -21,6 +21,8 @@ export interface PaintAppConfig {
   displaySize: { width: number; height: number };
   /** デバッグモードを有効にするか */
   enableDebug: boolean;
+  /** レンダラータイプ (新規追加) */
+  rendererType?: RendererType;
 }
 
 /**
@@ -32,7 +34,7 @@ export interface PaintAppDependencies {
   debugManager: DebugManager;
   stateSubscriptionManager: StateSubscriptionManager;
   inputProcessor: InputProcessor;
-  renderer: WebGLRenderer;
+  renderer: RendererAdapter;
 }
 
 /**

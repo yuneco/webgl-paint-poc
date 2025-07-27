@@ -19,6 +19,8 @@
     "webdriverio": "^9.18.1"
   },
   "dependencies": {
+    "regl": "^2.1.1",
+    "regl-line": "^1.1.1",
     "zustand": "^5.0.6"
   }
 }
